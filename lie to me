@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindReader V9 - VPN Edition</title>
+    <style>
+        /* --- 极简黑客风格 --- */
+        body { background-color: #000; color: #0f0; font-family: 'Consolas', monospace; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .main-stage { flex: 1; position: relative; display: flex; }
+        
+        /* 侧边栏 */
+        .sidebar { width: 180px; border-right: 1px solid #333; display: flex; flex-direction: column; background: #111; }
+        .side-item { flex: 1; border-bottom: 1px solid #333; position: relative; }
+        .side-label { position: absolute; top: 2px; left: 2px; font-size: 10px; background: #0f0; color: #000; padding: 2px; }
+        .side-canvas { width: 100%; height: 100%; }
+
+        /* 主视口 */
+        .viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; background: #000; }
+        #output_canvas { z-index: 10; max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        /* HUD 显示 */
+        .hud { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 20; background: rgba(0,0,0,0.7); padding: 10px; border: 1px solid #333; }
+        .status { font-size: 14px; color: #888; margin-bottom: 5px; }
+        .result { font-size: 20px; font-weight: bold; color: #0f0; text-shadow: 0 0 5px #0f0; }
+
+        /* 底部按钮 */
+        .controls { height: 60px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; background: #111; }
+        .btn { 
+            background: #0f0; color: #000; border: none; padding: 10px 25px; 
+            font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,255,0,0.3); transition: 0.2s;
+        }
+        .btn:hover { background: #fff; box-shadow: 0 0 20px rgba(0,255,0,0.8); }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="main-stage">
+    <div class="sidebar">
+        <div class="side-item"><span class="side-label">FACE MESH</span><canvas id="c_face" class="side-canvas"></canvas></div>
+        <div class="side-item"><span class="side-label">BODY POSE</span><canvas id="c_pose" class="side-canvas"></canvas></div>
+        <div class="side-item"><span class="side-label">HANDS</span><canvas id="c_hands" class="side-canvas"></canvas></div>
+    </div>
+
+    <div class="viewport">
+        <div class="hud">
+            <div class="status" id="status_text">\u6b63\u5728\u8fde\u63a5\u5b98\u65b9\u670d\u52a1\u5668...</div> 
+            <div class="result" id="result_text">...</div>
+        </div>
+        
+        <video id="hidden_video" style="display:none"></video>
+        <img id="hidden_img" style="display:none"> 
+        <canvas id="output_canvas"></canvas>
+    </div>
+</div>
+
+<div class="controls">
+    <input type="file" id="file_input" accept="image/*" style="display: none;">
+    <button class="btn" onclick="document.getElementById('file_input').click()">
+        \uD83D\uDCE4 \u4e0a\u4f20\u56fe\u7247\u5206\u6790
+    </button>
+</div>
+
+<script>
+window.onload = function() {
+    
+    // 1. 元素获取与自修复
+    const video = document.getElementById('hidden_video');
+    const img = document.getElementById('hidden_img');
+    const canvas = document.getElementById('output_canvas');
+    const ctx = canvas.getContext('2d');
+    const statusDiv = document.getElementById('status_text');
+    const resultDiv = document.getElementById('result_text');
+    
+    const sideCtx = {
+        face: document.getElementById('c_face').getContext('2d'),
+        pose: document.getElementById('c_pose').getContext('2d'),
+        hands: document.getElementById('c_hands').getContext('2d')
+    };
+
+    // 2. 核心分析逻辑
+    function runAnalysis(results) {
+        let msg = "\u6b63\u5e38 / \u5f85\u673a"; // 正常/待机
+        let color = "#0f0";
+
+        if (results.faceLandmarks) {
+            const mouth = results.faceLandmarks[13]; 
+            let isCovering = false;
+            
+            const check = (hand) => {
+                if(!hand) return false;
+                const tip = hand[8];
+                const d = Math.sqrt(Math.pow(mouth.x - tip.x, 2) + Math.pow(mouth.y - tip.y, 2));
+                return d < 0.15;
+            };
+
+            if (check(results.leftHandLandmarks) || check(results.rightHandLandmarks)) {
+                isCovering = true;
+            }
+
+            if (isCovering) {
+                msg = "\u26a0\ufe0f \u68c0\u6d4b\u5230\u906e\u6321/\u63a9\u9970"; // 检测到遮挡
+                color = "red";
+            }
+        } else {
+            msg = "\u672a\u68c0\u6d4b\u5230\u4eba\u8138"; // 未检测到人脸
+            color = "yellow";
+        }
+        resultDiv.innerText = msg;
+        resultDiv.style.color = color;
+    }
+
+    // 3. 绘制逻辑
+    function drawSkeleton(c, landmarks, conn, color) {
+        c.canvas.width = 300; c.canvas.height = 300;
+        c.clearRect(0,0,300,300);
+        if(landmarks) {
+            c.save();
+            drawConnectors(c, landmarks, conn, {color: color, lineWidth: 2});
+            c.restore();
+        }
+    }
+
+    // 4. MediaPipe 回调
+    function onResults(results) {
+        statusDiv.innerText = "\u2705 \u5206\u6790\u5b8c\u6210"; 
+        
+        canvas.width = img.naturalWidth || video.videoWidth;
+        canvas.height = img.naturalHeight || video.videoHeight;
+
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制原图
+        if (img.src && img.complete && img.naturalWidth > 0) {
+             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+
+        // 绘制骨架
+        drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#ffffff22', lineWidth: 1});
+        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffff00', lineWidth: 2});
+        drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ff', lineWidth: 2});
+        drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ff', lineWidth: 2});
+        ctx.restore();
+
+        drawSkeleton(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#0ff');
+        drawSkeleton(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#ff0');
+        drawSkeleton(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#f0f');
+
+        runAnalysis(results);
+    }
+
+    // 5. 初始化模型 (官方源)
+    // 关键点：locateFile 必须指向 jsdelivr，否则它会默认去找本地文件导致 404
+    const holistic = new Holistic({locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
+    }});
+    
+    holistic.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5 });
+    holistic.onResults(onResults);
+
+    // 6. 摄像头启动 (静默容错)
+    const camera = new Camera(video, {
+        onFrame: async () => { await holistic.send({image: video}); },
+        width: 640, height: 480
+    });
+    camera.start().catch(e => {
+        console.log("No camera detected, switching to upload mode.");
+        statusDiv.innerText = "\u7b49\u5f85\u56fe\u7247\u4e0a\u4f20..."; // 等待上传
+    });
+
+    // 7. 图片上传
+    document.getElementById('file_input').onchange = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+
+        statusDiv.innerText = "\u23f3 \u6b63\u5728\u8bfb\u53d6...";
+        
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            img.src = evt.target.result;
+            img.onload = async () => {
+                statusDiv.innerText = "\u23f3 AI\u8ba1\u7b97\u4e2d (\u8bf7\u4fdd\u6301VPN\u7545\u901a)...";
+                await holistic.send({image: img});
+            };
+        };
+        reader.readAsDataURL(file);
+    };
+};
+</script>
+</body>
+</html>
+/* --- 手机端适配代码 (Mobile Responsive) --- */
+@media screen and (max-width: 768px) {
+    /* 1. 改变主容器方向，改为垂直排列 */
+    .main-stage {
+        flex-direction: column-reverse; /* 把侧边栏放到下面，主视图在上面 */
+    }
+
+    /* 2. 调整侧边栏样式 */
+    .sidebar {
+        width: 100%;       /* 宽度占满 */
+        height: 150px;     /* 高度固定，防止太长 */
+        flex-direction: row; /* 侧边栏内部改为横向排列 */
+        border-right: none;
+        border-top: 1px solid #333;
+        flex-shrink: 0;    /* 防止被压缩 */
+    }
+
+    /* 3. 侧边栏里的三个小图均分宽度 */
+    .side-item {
+        flex: 1;
+        border-bottom: none;
+        border-right: 1px solid #333;
+    }
+    
+    
+    .controls {
+        height: 80px;
+        padding-bottom: 20px; /* 适配 iPhone 底部横条 */
+    }
+    
+    /* 5. 调整 HUD 文字大小 */
+    .result {
+        font-size: 16px;
+    }
+}
