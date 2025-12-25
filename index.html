@@ -3,69 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V14 - Bio-Metric Recorder</title>
+    <title>MindReader V15 - Ultimate</title>
     <style>
-        /* --- 1. 赛博档案风格 --- */
-        :root { --bg: #000; --panel: #111; --accent: #00f2ff; --warn: #ffcc00; --danger: #ff3366; --text-muted: #666; }
-        body { background: var(--bg); color: #fff; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
-
-        /* --- 2. 视图控制器 --- */
-        .view-section { display: none; width: 100%; height: 100%; flex-direction: column; }
-        .view-section.active { display: flex; }
-
-        /* --- 3. 实时检测界面 --- */
-        .top-bar { height: 120px; background: rgba(20,20,20,0.95); border-bottom: 1px solid #333; padding: 15px; z-index: 50; position: relative; }
-        .q-label { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; }
-        .q-text { font-size: 16px; font-weight: bold; line-height: 1.4; height: 50px; display: flex; align-items: center; }
-        .progress-line { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 0%; transition: width 0.1s linear; }
-
-        .stage { flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; }
-        #output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); /* 镜像 */ }
-        
-        .live-stats {
-            position: absolute; top: 10px; right: 10px; text-align: right;
-            background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px; font-size: 10px; color: var(--accent);
+        /* --- 1. V10/V12 视觉风格回归 (Glassmorphism) --- */
+        :root {
+            --bg-color: #050505;
+            --glass-bg: rgba(30, 30, 30, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-color: #00f2ff; /* 赛博蓝 */
+            --danger-color: #ff2a6d; /* 警示红 */
+            --text-main: #ffffff;
         }
 
-        /* --- 4. 报告界面 (Dossier) --- */
-        .report-container { flex: 1; padding: 20px; overflow-y: auto; background: #050505; }
-        .report-header { text-align: center; margin-bottom: 30px; border-bottom: 1px dashed #333; padding-bottom: 20px; }
-        .report-title { font-size: 24px; color: var(--accent); margin-bottom: 5px; }
-        .report-meta { font-size: 12px; color: var(--text-muted); }
-
-        .timeline-card {
-            background: #111; border-left: 3px solid #333; padding: 15px; margin-bottom: 20px;
-            position: relative; transition: all 0.3s ease;
-        }
-        .timeline-card.stress { border-left-color: var(--danger); background: rgba(255, 51, 102, 0.05); }
-        .timeline-card.baseline { border-left-color: var(--accent); }
-        
-        .card-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: #888; }
-        .card-q { font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #fff; }
-        
-        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
-        .data-item { background: #000; padding: 8px; border-radius: 4px; }
-        .data-label { color: #666; margin-bottom: 2px; }
-        .data-val { font-weight: bold; font-size: 14px; }
-        .val-high { color: var(--danger); }
-        .val-norm { color: var(--accent); }
-
-        .anomaly-box { 
-            margin-top: 10px; padding: 10px; background: rgba(255, 51, 102, 0.1); 
-            border: 1px solid var(--danger); color: var(--danger); font-size: 12px;
-            display: none; /* 有异常才显示 */
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 100%);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; /* 回归苹果字体 */
+            margin: 0;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* --- 5. 初始覆盖层 --- */
-        .start-overlay {
+        /* --- 2. 布局容器 (V12 结构) --- */
+        .app-container {
+            flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%;
+        }
+
+        /* --- 3. 顶部 HUD (增强版，用于显示题目) --- */
+        .top-hud {
+            height: auto; min-height: 80px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 15px 20px; z-index: 50; flex-shrink: 0; position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .phase-tag {
+            font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--accent-color);
+            text-transform: uppercase; margin-bottom: 5px;
+            background: rgba(0, 242, 255, 0.1); padding: 2px 8px; border-radius: 4px;
+        }
+        
+        .question-text {
+            font-size: 16px; font-weight: 600; text-align: center; line-height: 1.4;
+            max-width: 600px;
+        }
+
+        /* 进度条 (V14 功能保留) */
+        .timer-bar {
+            position: absolute; bottom: 0; left: 0; height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), #0051ff);
+            width: 0%; transition: width 0.1s linear;
+        }
+
+        /* --- 4. 主舞台 (V12 样式) --- */
+        .stage {
+            flex: 1; position: relative; display: flex; justify-content: center; align-items: center;
+            overflow: hidden; background: transparent;
+        }
+
+        #output_canvas {
+            max-width: 100%; max-height: 100%; object-fit: contain;
+            border-radius: 12px; transform: scaleX(-1); /* 镜像 */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        /* 实时数据浮标 */
+        .live-stats-badge {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+            padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border);
+            font-size: 10px; color: rgba(255,255,255,0.7); text-align: right; pointer-events: none;
+        }
+        .stat-val { color: #fff; font-weight: bold; font-size: 12px; }
+
+        /* --- 5. 底部侧边栏 (V12 样式，底部预览) --- */
+        .sidebar {
+            height: 110px; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+            display: flex; flex-direction: row; padding: 10px; gap: 10px;
+            flex-shrink: 0; overflow-x: auto; z-index: 40;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        }
+
+        .preview-card {
+            flex: 1; min-width: 80px; max-width: 120px;
+            background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border);
+            position: relative; overflow: hidden;
+        }
+        .card-label { position: absolute; top: 4px; left: 6px; font-size: 8px; color: rgba(255,255,255,0.5); font-weight: 700; }
+        .side-canvas { width: 100%; height: 100%; opacity: 0.8; }
+
+        /* --- 6. 覆盖层 (启动页 & 报告页) --- */
+        .overlay-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; text-align: center;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
-        .start-btn {
-            margin-top: 20px; padding: 15px 40px; background: var(--accent); color: #000;
-            border: none; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer;
-            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+        .overlay-layer.active { opacity: 1; pointer-events: auto; }
+
+        /* 启动卡片 */
+        .start-card {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+            padding: 40px; border-radius: 24px; text-align: center; max-width: 80%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .btn-gradient {
+            margin-top: 30px; padding: 15px 40px; border-radius: 50px; border: none;
+            background: linear-gradient(135deg, var(--accent-color), #0051ff);
+            color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 242, 255, 0.3); transition: transform 0.2s;
+        }
+        .btn-gradient:active { transform: scale(0.95); }
+
+        /* 报告内容区 (V10 风格) */
+        .report-scroll {
+            width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .report-card {
+            width: 100%; max-width: 500px; margin-bottom: 20px;
+            background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 20px; position: relative;
+        }
+        .report-card.stress { border-left: 4px solid var(--danger-color); background: linear-gradient(90deg, rgba(255,42,109,0.05), transparent); }
+        .report-card.baseline { border-left: 4px solid var(--accent-color); }
+
+        .data-row { display: flex; justify-content: space-between; margin-top: 15px; font-size: 13px; color: rgba(255,255,255,0.7); }
+        .val-highlight { color: var(--accent-color); font-weight: bold; }
+        .val-danger { color: var(--danger-color); font-weight: bold; }
+        
+        .anomaly-tag {
+            display: inline-block; background: rgba(255, 42, 109, 0.2); color: var(--danger-color);
+            font-size: 10px; padding: 4px 8px; border-radius: 4px; margin-top: 10px; border: 1px solid rgba(255, 42, 109, 0.3);
         }
 
         /* 隐形源 */
@@ -79,41 +156,45 @@
 </head>
 <body>
 
-<div class="view-section active" id="view_start">
-    <div class="start-overlay">
-        <h1 style="color:var(--accent)">MIND READER V14</h1>
-        <p style="color:#666; font-size:12px; margin-top:-10px">BIO-METRIC ANALYSIS SYSTEM</p>
-        <div style="margin-top:40px; color:#888; font-size:12px; max-width: 300px;">
-            ⚠️ 警告：<br>本系统将调用摄像头进行实时心率与微表情分析。<br>请确保光线充足，正对屏幕。
+<div class="overlay-layer active" id="start_layer">
+    <div class="start-card">
+        <h1 style="margin:0; font-weight:800; letter-spacing:-1px;">MindReader <span style="color:var(--accent-color)">X</span></h1>
+        <p style="color:rgba(255,255,255,0.6); font-size:14px; margin-top:10px;">生物信号测谎分析系统</p>
+        <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:30px; line-height:1.6">
+            系统将通过摄像头采集微表情数据<br>建立心理基准线并进行压力测试
         </div>
-        <button class="start-btn" onclick="initSystem()">启动神经连接</button>
+        <button class="btn-gradient" onclick="startSystem()">开始连接</button>
     </div>
 </div>
 
-<div class="view-section" id="view_test">
-    <div class="top-bar">
-        <div class="q-label" id="q_type">CALIBRATING...</div>
-        <div class="q-text" id="q_display">初始化传感器...</div>
-        <div class="progress-line" id="timer_line"></div>
+<div class="app-container">
+    <div class="top-hud">
+        <div class="phase-tag" id="hud_phase">SYSTEM STANDBY</div>
+        <div class="question-text" id="hud_text">正在初始化神经连接...</div>
+        <div class="timer-bar" id="hud_timer"></div>
     </div>
+
     <div class="stage">
-        <div class="live-stats">
-            BLINK: <span id="live_blink">0</span><br>
-            POSE: <span id="live_pose">STABLE</span>
+        <div class="live-stats-badge">
+            <div>眨眼频率: <span class="stat-val" id="live_blink">0</span></div>
+            <div>手部安定: <span class="stat-val" id="live_hand">--</span></div>
         </div>
         <canvas id="output_canvas"></canvas>
     </div>
+
+    <div class="sidebar">
+        <div class="preview-card"><span class="card-label">FACE MESH</span><canvas id="cv_face" class="side-canvas"></canvas></div>
+        <div class="preview-card"><span class="card-label">BODY POSE</span><canvas id="cv_pose" class="side-canvas"></canvas></div>
+        <div class="preview-card"><span class="card-label">HANDS</span><canvas id="cv_hands" class="side-canvas"></canvas></div>
+    </div>
 </div>
 
-<div class="view-section" id="view_report">
-    <div class="report-container">
-        <div class="report-header">
-            <div class="report-title">心理侧写报告</div>
-            <div class="report-meta">SUBJECT ID: #8921-X • DATE: <span id="report_date"></span></div>
-        </div>
-        <div id="report_content">
+<div class="overlay-layer" id="report_layer">
+    <div class="report-scroll">
+        <h2 style="margin-bottom:30px; color:var(--accent-color)">分析档案报告</h2>
+        <div id="report_content" style="width:100%; display:flex; flex-direction:column; align-items:center;">
             </div>
-        <button class="start-btn" style="width:100%; margin-top:20px; background:#333; color:#fff" onclick="location.reload()">清除档案并重置</button>
+        <button class="btn-gradient" style="background:#333; margin-top:30px; margin-bottom:50px" onclick="location.reload()">重新开始测试</button>
     </div>
 </div>
 
@@ -122,62 +203,55 @@
 <script>
     // --- 剧本配置 ---
     const SCRIPT = [
-        { id: 1, type: 'baseline', time: 8, text: "请保持放松，注视屏幕。\n告诉我，你早餐吃了什么？" },
+        { id: 1, type: 'baseline', time: 8, text: "请放松，看着镜头。\n告诉我，你今天早餐吃了什么？" },
         { id: 2, type: 'baseline', time: 8, text: "好的。平时休息的时候，\n你更喜欢独处还是和朋友聚会？" },
-        { id: 3, type: 'stress', time: 10, text: "听好：\n如果你现在的伴侣和你的母亲同时掉进河里，\n只能救一个，你救谁？立刻回答！" },
+        { id: 3, type: 'stress', time: 10, text: "现在听好：\n如果你现在的伴侣和你的母亲同时掉进河里，\n只能救一个，你救谁？立刻回答！" },
         { id: 4, type: 'stress', time: 8, text: "你在撒谎吗？\n为什么刚才你的眼神在躲避？" }
     ];
 
-    // --- 全局状态 ---
-    let sessionData = []; // 存储所有问题的分析数据
+    // --- 全局变量 ---
+    let sessionData = [];
     let currentQ = null;
-    let qTimer = null;
-    let startTime = 0;
-    
-    // 当前题目的临时统计
-    let tempStats = {
-        blinks: 0,
-        frames: 0,
-        shoulderYSum: 0,
-        handMoveSum: 0,
-        lastEyeOpen: true,
-        lastHandPos: null
-    };
+    let tempStats = { blinks: 0, frames: 0, shoulderYSum: 0, handMoveSum: 0, lastEyeOpen: true, lastHandPos: null };
 
-    // --- 系统初始化 ---
-    async function initSystem() {
-        switchView('view_test');
-        document.getElementById('q_display').innerText = "正在接入神经信号...";
-        
+    // --- 1. 启动系统 ---
+    async function startSystem() {
+        document.getElementById('start_layer').classList.remove('active');
         const video = document.getElementById('src_video');
         
-        // 启动摄像头
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
             video.srcObject = stream;
             await video.play();
-            
-            // 启动 AI
+
             const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
             holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5});
             holistic.onResults(onResults);
             
-            // 启动循环检测
             const camera = new Camera(video, {
                 onFrame: async () => { await holistic.send({image: video}); },
                 width: 640, height: 480
             });
             camera.start();
 
-            // 3秒后开始第一题
-            setTimeout(() => runQuestion(0), 3000);
+            // 倒计时 3 秒后开始
+            let count = 3;
+            const introTimer = setInterval(() => {
+                document.getElementById('hud_text').innerText = `神经连接建立中... ${count}`;
+                count--;
+                if(count < 0) {
+                    clearInterval(introTimer);
+                    runQuestion(0);
+                }
+            }, 1000);
 
         } catch (e) {
-            alert("摄像头启动失败: " + e.message);
+            alert("请允许摄像头权限以进行测谎分析");
+            location.reload();
         }
     }
 
-    // --- 流程控制 ---
+    // --- 2. 流程控制 (V14 逻辑) ---
     function runQuestion(index) {
         if (index >= SCRIPT.length) {
             generateReport();
@@ -185,82 +259,78 @@
         }
 
         currentQ = SCRIPT[index];
-        
-        // 重置统计器
         tempStats = { blinks: 0, frames: 0, shoulderYSum: 0, handMoveSum: 0, lastEyeOpen: true, lastHandPos: null };
-        startTime = Date.now();
-
-        // UI 更新
-        document.getElementById('q_type').innerText = currentQ.type === 'baseline' ? `BASELINE RECORDING #${currentQ.id}` : `STRESS TEST #${currentQ.id}`;
-        document.getElementById('q_type').style.color = currentQ.type === 'baseline' ? 'var(--accent)' : 'var(--danger)';
-        document.getElementById('q_display').innerText = currentQ.text;
+        
+        // 更新 UI
+        const isBase = currentQ.type === 'baseline';
+        const phaseLabel = document.getElementById('hud_phase');
+        phaseLabel.innerText = isBase ? `基准校准 #${currentQ.id}` : `压力探测 #${currentQ.id}`;
+        phaseLabel.style.color = isBase ? 'var(--accent-color)' : 'var(--danger-color)';
+        phaseLabel.style.background = isBase ? 'rgba(0, 242, 255, 0.1)' : 'rgba(255, 42, 109, 0.1)';
+        
+        document.getElementById('hud_text').innerText = currentQ.text;
         
         // 进度条动画
-        const line = document.getElementById('timer_line');
-        line.style.transition = 'none';
-        line.style.width = '0%';
+        const bar = document.getElementById('hud_timer');
+        bar.style.transition = 'none'; bar.style.width = '0%';
         setTimeout(() => {
-            line.style.transition = `width ${currentQ.time}s linear`;
-            line.style.width = '100%';
+            bar.style.transition = `width ${currentQ.time}s linear`;
+            bar.style.width = '100%';
         }, 50);
 
-        // 计时结束处理
+        // 倒计时
         setTimeout(() => {
-            saveQuestionData();
+            saveData();
             runQuestion(index + 1);
         }, currentQ.time * 1000);
     }
 
-    // --- 数据记录 ---
-    function saveQuestionData() {
+    function saveData() {
         const durationMin = currentQ.time / 60;
-        const avgShoulder = tempStats.frames > 0 ? (tempStats.shoulderYSum / tempStats.frames) : 0;
-        const avgHandMove = tempStats.frames > 0 ? (tempStats.handMoveSum / tempStats.frames) : 0;
-        
-        // 计算 CPM (Counts Per Minute)
         const blinkRate = Math.round(tempStats.blinks / durationMin);
-
+        const posture = tempStats.frames > 0 ? (tempStats.shoulderYSum / tempStats.frames) : 0;
+        
         sessionData.push({
-            qId: currentQ.id,
-            type: currentQ.type,
-            text: currentQ.text,
-            stats: {
-                blinkRate: blinkRate,
-                postureIndex: avgShoulder, // Y越小肩膀越高(耸肩)
-                fidgetIndex: avgHandMove // 躁动指数
-            }
+            q: currentQ,
+            stats: { blinkRate, posture }
         });
     }
 
-    // --- 实时 AI 分析 ---
+    // --- 3. AI 分析 & 绘制 (V12 视觉 + V14 算法) ---
+    const canvas = document.getElementById('output_canvas');
+    const ctx = canvas.getContext('2d');
+    const sideCtx = {
+        face: document.getElementById('cv_face').getContext('2d'),
+        pose: document.getElementById('cv_pose').getContext('2d'),
+        hands: document.getElementById('cv_hands').getContext('2d')
+    };
+
     function onResults(results) {
-        // 绘制画面
-        const canvas = document.getElementById('output_canvas');
-        const ctx = canvas.getContext('2d');
+        // 渲染主画面
+        const video = document.getElementById('src_video');
         canvas.width = 640; canvas.height = 480;
         ctx.save();
         ctx.clearRect(0, 0, 640, 480);
-        ctx.drawImage(document.getElementById('src_video'), 0, 0, 640, 480);
+        ctx.drawImage(video, 0, 0, 640, 480);
         
-        // 简单绘制人脸框
-        if(results.faceLandmarks) {
-            drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
-        }
+        // 绘制骨架 (V10 风格：细线、低透明度)
+        if(results.faceLandmarks) drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#00f2ff22', lineWidth: 0.5});
+        if(results.poseLandmarks) drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffffff55', lineWidth: 1});
         ctx.restore();
 
-        // 如果不在答题期间，不记录数据
-        if (!currentQ) return;
+        // 渲染侧边栏
+        drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#00f2ff');
+        drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#ffffff');
+        drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#ff2a6d');
 
+        // 数据计算
+        if (!currentQ) return;
         tempStats.frames++;
 
-        // 1. 眨眼计算
         if (results.faceLandmarks) {
-            const leftEyeTop = results.faceLandmarks[159].y;
-            const leftEyeBottom = results.faceLandmarks[145].y;
-            const eyeDist = Math.abs(leftEyeTop - leftEyeBottom);
-            
-            // 简单阈值判断
-            const isClosed = eyeDist < 0.015; 
+            // 眨眼检测
+            const leftEye = Math.abs(results.faceLandmarks[159].y - results.faceLandmarks[145].y);
+            const isClosed = leftEye < 0.015;
             if (isClosed && tempStats.lastEyeOpen) {
                 tempStats.blinks++;
                 document.getElementById('live_blink').innerText = tempStats.blinks;
@@ -268,96 +338,61 @@
             tempStats.lastEyeOpen = !isClosed;
         }
 
-        // 2. 姿态 (耸肩检测)
         if (results.poseLandmarks) {
-            const shldrY = (results.poseLandmarks[11].y + results.poseLandmarks[12].y) / 2;
-            tempStats.shoulderYSum += shldrY;
+            // 耸肩数据
+            tempStats.shoulderYSum += (results.poseLandmarks[11].y + results.poseLandmarks[12].y) / 2;
         }
+        
+        // 手部状态更新
+        const handActive = results.leftHandLandmarks || results.rightHandLandmarks;
+        document.getElementById('live_hand').innerText = handActive ? "活跃" : "静止";
+        document.getElementById('live_hand').style.color = handActive ? "var(--danger-color)" : "#fff";
+    }
 
-        // 3. 手部躁动
-        if (results.leftHandLandmarks || results.rightHandLandmarks) {
-            const hand = results.leftHandLandmarks || results.rightHandLandmarks;
-            const currPos = hand[0]; // 手腕
-            if (tempStats.lastHandPos) {
-                const move = Math.sqrt(Math.pow(currPos.x - tempStats.lastHandPos.x, 2) + Math.pow(currPos.y - tempStats.lastHandPos.y, 2));
-                tempStats.handMoveSum += move;
-            }
-            tempStats.lastHandPos = currPos;
+    function drawSide(c, data, conn, color) {
+        c.canvas.width=200; c.canvas.height=200; c.clearRect(0,0,200,200);
+        if(data) {
+            c.save();
+            drawConnectors(c, data, conn, {color: color, lineWidth: 2});
+            c.restore();
         }
     }
 
-    // --- 报告生成核心逻辑 ---
+    // --- 4. 报告生成 (V10 风格卡片) ---
     function generateReport() {
-        switchView('view_report');
-        document.getElementById('report_date').innerText = new Date().toLocaleString();
+        document.getElementById('report_layer').classList.add('active');
         const container = document.getElementById('report_content');
         
-        // 1. 计算基准值 (Q1, Q2 的平均)
-        const baselines = sessionData.filter(d => d.type === 'baseline');
-        const baseBlink = baselines.reduce((acc, cur) => acc + cur.stats.blinkRate, 0) / baselines.length;
-        const basePosture = baselines.reduce((acc, cur) => acc + cur.stats.postureIndex, 0) / baselines.length;
-
-        // 2. 渲染每一题的卡片
-        sessionData.forEach(data => {
-            const isStress = data.type === 'stress';
-            
-            // 异常判定逻辑
-            let anomalies = [];
-            // 眨眼：如果比基准高 50%
-            if (isStress && data.stats.blinkRate > baseBlink * 1.5) anomalies.push("眨眼频率激增 (焦虑反应)");
-            // 坐姿：如果肩膀位置比基准高 (Y值变小) 
-            if (isStress && data.stats.postureIndex < basePosture - 0.02) anomalies.push("双肩明显上耸 (龟缩防御)");
-            // 躁动
-            if (isStress && data.stats.fidgetIndex > 0.05) anomalies.push("手部多余动作增加 (不安)");
-
-            const html = `
-                <div class="timeline-card ${data.type}">
-                    <div class="card-header">
-                        <span>PHASE: ${data.type.toUpperCase()}</span>
-                        <span>QID: ${data.qId}</span>
-                    </div>
-                    <div class="card-q">"${data.text.replace(/\n/g, ' ')}"</div>
-                    <div class="data-grid">
-                        <div class="data-item">
-                            <div class="data-label">BLINK RATE (CPM)</div>
-                            <div class="data-val ${anomalies.some(s=>s.includes('眨眼')) ? 'val-high' : 'val-norm'}">${data.stats.blinkRate}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="data-label">POSTURE INDEX</div>
-                            <div class="data-val">${data.stats.postureIndex.toFixed(3)}</div>
-                        </div>
-                    </div>
-                    ${anomalies.length > 0 ? 
-                        `<div class="anomaly-box">⚠ DETECTED: ${anomalies.join(' / ')}</div>` 
-                        : ''}
-                </div>
-            `;
-            container.innerHTML += html;
-        });
-
-        // 3. 总体结论
-        const stressQs = sessionData.filter(d => d.type === 'stress');
-        const stressBlink = stressQs.reduce((acc, cur) => acc + cur.stats.blinkRate, 0) / stressQs.length;
+        // 计算基准
+        const baselines = sessionData.filter(d => d.q.type === 'baseline');
+        const baseBlink = baselines.reduce((a,b) => a + b.stats.blinkRate, 0) / (baselines.length || 1);
         
-        let conclusion = "";
-        if (stressBlink > baseBlink * 1.5) {
-            conclusion = `<div style="text-align:center; padding:20px; border:1px solid var(--danger); color:var(--danger); margin-top:20px">
-                <h2>⚠️ 欺骗/高压反应极高</h2>
-                <p>施压期眨眼频率比基准期增加了 ${Math.round((stressBlink - baseBlink)/baseBlink * 100)}%</p>
-            </div>`;
-        } else {
-            conclusion = `<div style="text-align:center; padding:20px; border:1px solid var(--accent); color:var(--accent); margin-top:20px">
-                <h2>✅ 反应相对诚实/平稳</h2>
-                <p>未检测到显著的生理指标波动</p>
-            </div>`;
-        }
-        container.innerHTML += conclusion;
-    }
-
-    // --- 工具 ---
-    function switchView(id) {
-        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        sessionData.forEach(item => {
+            const isStress = item.q.type === 'stress';
+            const blinkVal = item.stats.blinkRate;
+            
+            // 异常判定
+            const isHighBlink = isStress && (blinkVal > baseBlink * 1.3);
+            
+            const card = document.createElement('div');
+            card.className = `report-card ${item.q.type}`;
+            card.innerHTML = `
+                <div style="font-size:10px; opacity:0.5; text-transform:uppercase; margin-bottom:5px">${item.q.type} PHASE</div>
+                <div style="font-size:14px; font-weight:600; margin-bottom:15px; line-height:1.4">"${item.q.text.replace(/\n/g,' ')}"</div>
+                <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px">
+                    <div class="data-row">
+                        <span>眨眼频率 (CPM)</span>
+                        <span class="${isHighBlink ? 'val-danger' : 'val-highlight'}">${blinkVal}</span>
+                    </div>
+                    <div class="data-row">
+                        <span>姿态指数</span>
+                        <span>${item.stats.posture.toFixed(2)}</span>
+                    </div>
+                </div>
+                ${isHighBlink ? `<div class="anomaly-tag">⚠️ 检测到焦虑反应</div>` : ''}
+            `;
+            container.appendChild(card);
+        });
     }
 </script>
 </body>
