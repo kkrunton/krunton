@@ -3,60 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V18 - Verdict</title>
+    <title>MindReader V1.0</title>
     <style>
-        /* --- 1. 视觉核心 (Cyber-Analyst Style) --- */
+        /* --- 1. 视觉系统 (V1.0 Professional) --- */
         :root {
-            --bg: #000000;
-            --glass: rgba(20, 20, 20, 0.85);
+            --bg: #050505;
+            --glass: rgba(30, 30, 30, 0.85);
             --border: rgba(255, 255, 255, 0.15);
-            --accent: #00f2ff; /* 正常/基准 */
-            --warn: #ffcc00;   /* 思考/评估 */
-            --danger: #ff2a6d; /* 撒谎/焦虑 */
+            --accent: #007aff; /* iOS 蓝，更专业 */
+            --warn: #ffcc00;
+            --danger: #ff3b30;
             --text: #ffffff;
         }
 
         body {
             background: var(--bg); color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", monospace;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
             margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
         }
 
         .app { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
 
-        /* --- 2. 顶部情报栏 --- */
+        /* --- 2. 顶部题目栏 --- */
         .hud {
             min-height: 100px; background: var(--glass); border-bottom: 1px solid var(--border);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 10px 20px; z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
         }
         .phase-badge {
-            font-size: 10px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
-            border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; border: 1px solid currentColor;
+            font-size: 10px; font-weight: 600; letter-spacing: 1px; padding: 4px 8px;
+            border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; background: rgba(255,255,255,0.1);
         }
-        .q-text { font-size: 16px; font-weight: 600; text-align: center; line-height: 1.4; max-width: 600px; }
-        .progress { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; transition: width 0.1s linear; }
+        .q-text { font-size: 17px; font-weight: 600; text-align: center; line-height: 1.4; max-width: 600px; }
+        .progress { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 0%; transition: width 0.1s linear; }
 
         /* --- 3. 监控画面 --- */
         .viewport {
-            flex: 1; position: relative; background: #050505; display: flex; justify-content: center; align-items: center; overflow: hidden;
+            flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden;
         }
         #main_canvas {
             width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1);
         }
 
-        /* 实时微表情浮层 */
+        /* 实时反馈标签 */
         .detect-tags {
-            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: none;
+            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none;
         }
         .tag {
-            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; font-size: 10px;
-            font-weight: bold; border-left: 3px solid; opacity: 0; transition: opacity 0.2s;
+            background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 6px; font-size: 11px;
+            font-weight: 500; border-left: 3px solid; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(4px);
         }
         .tag.active { opacity: 1; }
-        .tag.danger { border-color: var(--danger); color: var(--danger); }
-        .tag.warn { border-color: var(--warn); color: var(--warn); }
-        .tag.info { border-color: var(--accent); color: var(--accent); }
+        .tag.danger { border-color: var(--danger); color: #ff8a84; }
+        .tag.warn { border-color: var(--warn); color: #ffe684; }
+        .tag.info { border-color: var(--accent); color: #84c1ff; }
 
         /* --- 4. 底部仪表盘 --- */
         .dashboard {
@@ -65,39 +65,49 @@
             backdrop-filter: blur(20px); padding-bottom: calc(15px + env(safe-area-inset-bottom));
         }
         .dash-card {
-            flex: 1; min-width: 90px; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            flex: 1; min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
             border-radius: 8px; position: relative; overflow: hidden;
         }
-        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 8px; color: #666; font-weight: bold; }
-        .mini-canvas { width: 100%; height: 100%; opacity: 0.6; }
+        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 9px; color: rgba(255,255,255,0.6); font-weight: 600; }
+        .mini-canvas { width: 100%; height: 100%; opacity: 0.8; }
 
-        /* --- 5. 启动 & 报告层 --- */
+        /* --- 5. 启动页 (专业引导风格) --- */
         .layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 100; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; transition: opacity 0.3s;
+            background: #000; z-index: 100; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: opacity 0.3s; padding: 30px; box-sizing: border-box;
         }
         .layer.hidden { opacity: 0; pointer-events: none; }
 
-        .btn-main {
-            margin-top: 30px; padding: 16px 40px; border-radius: 50px; border: none;
-            background: linear-gradient(135deg, var(--accent), #0044ff); color: #fff;
-            font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+        .guide-box {
+            background: #111; border: 1px solid #333; border-radius: 20px; padding: 30px;
+            max-width: 400px; width: 100%; text-align: center;
         }
+        .guide-icon { font-size: 40px; margin-bottom: 20px; display: block; }
+        .guide-item {
+            display: flex; align-items: center; text-align: left; margin: 15px 0; font-size: 13px; color: #ccc;
+            background: #222; padding: 12px; border-radius: 10px;
+        }
+        .guide-emoji { font-size: 20px; margin-right: 15px; width: 30px; text-align: center; }
 
-        /* 报告布局 */
-        .report-box { width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; }
+        .btn-main {
+            margin-top: 20px; width: 100%; padding: 16px 0; border-radius: 12px; border: none;
+            background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+        }
+        .btn-main:active { opacity: 0.8; transform: scale(0.98); }
+
+        /* 报告页 */
+        .report-box { width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; background: #050505; }
+        .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
         .photo-card { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
         .photo-img { width: 100%; height: auto; display: block; border-bottom: 1px solid #333; }
-        .photo-meta { padding: 8px; font-size: 10px; text-align: center; color: #888; text-transform: uppercase; font-weight: bold; }
+        .photo-meta { padding: 8px; font-size: 10px; text-align: center; color: #888; text-transform: uppercase; font-weight: 600; }
         
         .log-item {
-            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px;
-            border-left: 3px solid #555;
+            background: #111; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #222;
         }
-        .log-item.stress { border-left-color: var(--danger); background: rgba(255, 42, 109, 0.05); }
-        .log-item.baseline { border-left-color: var(--accent); }
+        .log-item.stress { border-left: 4px solid var(--danger); }
+        .log-item.baseline { border-left: 4px solid var(--accent); }
 
         #src_video { display: none; }
     </style>
@@ -110,94 +120,105 @@
 <body>
 
 <div class="layer" id="layer_start">
-    <h1 style="letter-spacing: -2px; margin-bottom: 5px;">MIND<span style="color:var(--accent)">READER</span></h1>
-    <p style="color:#666; font-size:12px">V18 VERDICT EDITION</p>
-    <div style="margin-top:40px; text-align:center; color:#888; font-size:12px; line-height:1.8">
-        已加载逻辑模块：<br>
-        • <span style="color:var(--danger)">DECEPTION</span>: 摸鼻检测 (Pinocchio)<br>
-        • <span style="color:var(--warn)">EVALUATION</span>: 摸下巴/手指搓动<br>
-        • <span style="color:var(--accent)">SHOCK</span>: 瞪眼/惊讶检测<br>
-        • <span style="color:#fff">EVIDENCE</span>: 异常瞬间自动抓拍
+    <div class="guide-box">
+        <h1 style="margin:0 0 5px 0; font-size: 24px;">MindReader <span style="font-size:14px; color:#666; vertical-align: middle;">V1.0</span></h1>
+        <p style="color:#666; font-size:13px; margin-bottom:30px">非语言行为分析系统</p>
+        
+        <div class="guide-item">
+            <div class="guide-emoji">📏</div>
+            <div>
+                <div style="color:#fff; font-weight:600">保持距离</div>
+                <div>请将手机放置在 50-80cm 处</div>
+            </div>
+        </div>
+        <div class="guide-item">
+            <div class="guide-emoji">👤</div>
+            <div>
+                <div style="color:#fff; font-weight:600">调整构图</div>
+                <div>确保面部、上半身、双手均在画面内</div>
+            </div>
+        </div>
+        <div class="guide-item">
+            <div class="guide-emoji">💡</div>
+            <div>
+                <div style="color:#fff; font-weight:600">环境光线</div>
+                <div>请在光线充足的环境下测试，避免逆光</div>
+            </div>
+        </div>
+
+        <button class="btn-main" onclick="startSystem()">我已准备就绪</button>
     </div>
-    <button class="btn-main" onclick="startSystem()">启动审讯流程</button>
 </div>
 
 <div class="app">
     <div class="hud">
-        <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
-        <div class="q-text" id="hud_text">传感器校准中...</div>
+        <div class="phase-badge" id="hud_badge" style="color:var(--accent)">SYSTEM READY</div>
+        <div class="q-text" id="hud_text">正在初始化传感器...</div>
         <div class="progress" id="hud_bar"></div>
     </div>
 
     <div class="viewport">
         <div class="detect-tags">
-            <div class="tag danger" id="tag_nose">🤥 摸鼻(掩饰)</div>
-            <div class="tag warn" id="tag_chin">🤔 摸下巴(评估)</div>
-            <div class="tag warn" id="tag_fidget">🤏 手指搓动(焦虑)</div>
-            <div class="tag info" id="tag_shock">😲 瞪眼(惊讶)</div>
+            <div class="tag danger" id="tag_nose">🤥 触碰面部 (掩饰)</div>
+            <div class="tag warn" id="tag_chin">🤔 触碰下巴 (评估)</div>
+            <div class="tag warn" id="tag_fidget">🤏 手部摩挲 (焦虑)</div>
+            <div class="tag info" id="tag_shock">😲 眼部扩张 (惊讶)</div>
+            <div class="tag danger" id="tag_cross">🙅‍♂️ 双臂交叉 (防御)</div>
         </div>
         <canvas id="main_canvas"></canvas>
     </div>
 
     <div class="dashboard">
         <div class="dash-card"><div class="dash-label">FACE MESH</div><canvas id="cv_face" class="mini-canvas"></canvas></div>
-        <div class="dash-card"><div class="dash-label">SKELETON</div><canvas id="cv_pose" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><div class="dash-label">BODY POSE</div><canvas id="cv_pose" class="mini-canvas"></canvas></div>
         <div class="dash-card"><div class="dash-label">HANDS</div><canvas id="cv_hands" class="mini-canvas"></canvas></div>
     </div>
 </div>
 
 <div class="layer hidden" id="layer_report">
     <div class="report-box">
-        <h2 style="text-align:center; color:var(--accent); margin-bottom:30px">最终裁决档案</h2>
+        <h2 style="text-align:center; color:#fff; margin-bottom:10px; font-size:20px">行为分析档案</h2>
+        <div style="text-align:center; color:#666; font-size:12px; margin-bottom:30px">AUTOMATED BEHAVIORAL ANALYSIS REPORT</div>
         
-        <div style="font-size:12px; color:#888; margin-bottom:10px">EVIDENCE SNAPSHOTS (关键帧抓拍)</div>
+        <div style="font-size:11px; color:#666; font-weight:bold; letter-spacing:1px">关键帧证据对比</div>
         <div class="evidence-row" id="evidence_area">
             </div>
 
-        <div style="font-size:12px; color:#888; margin-bottom:10px">BEHAVIOR LOG (行为流水)</div>
-        <div id="log_area"></div>
+        <div style="font-size:11px; color:#666; font-weight:bold; letter-spacing:1px; margin-top:20px">详细行为流水</div>
+        <div id="log_area" style="margin-top:10px"></div>
 
-        <button class="btn-main" style="width:100%; background:#333; margin-top:20px" onclick="location.reload()">归档并重置</button>
+        <button class="btn-main" style="background:#333; border:1px solid #555; margin-top:30px" onclick="location.reload()">结束并重置</button>
     </div>
 </div>
 
 <video id="src_video" playsinline></video>
 
 <script>
-    // --- 随机题库 ---
-    const POOL_BASE = ["简单介绍一下你最近在忙什么？", "你最喜欢的食物是什么？描述一下味道。"];
+    // --- 题库系统 ---
+    const POOL_BASE = ["请放松，简单介绍一下你的工作或学习？", "你最喜欢的旅行目的地是哪里？为什么？"];
     const POOL_STRESS = [
-        "【高压】看着我。你是否曾经背叛过信任你的人？",
-        "【两难】伴侣和母亲同时落水，只能救一个，你救谁？立刻回答！",
-        "【审讯】如果现在查你的手机浏览记录，会有见不得人的东西吗？"
+        "【高压】看着我。你最近是否对身边的人撒过谎？",
+        "【两难】如果必须在事业和家庭中牺牲一个，你选哪个？",
+        "【审讯】你是否曾经利用过别人的信任来获利？"
     ];
 
     let SCRIPT = [];
     let sessionData = [];
     let currentQ = null;
-    
-    // 抓拍库
     let evidence = { baseline: null, anomaly: null, maxScore: 0 };
-
-    // 统计变量
     let tempStats = { 
-        blinks: 0, 
-        baseEyeHeight: 0, // 基准眼睛开合度
-        noseTouchCount: 0,
-        chinTouchCount: 0,
-        fidgetCount: 0,
-        shockCount: 0,
-        frames: 0
+        blinks: 0, baseEyeHeight: 0, noseTouchCount: 0, chinTouchCount: 0, 
+        fidgetCount: 0, shockCount: 0, frames: 0 
     };
 
-    // --- 启动 ---
+    // --- 启动逻辑 ---
     async function startSystem() {
-        // 随机抽题: 2基准 + 2高压
+        // 随机组题
         SCRIPT = [
             { id: 1, type: 'baseline', time: 8, text: POOL_BASE[Math.floor(Math.random()*POOL_BASE.length)] },
             { id: 2, type: 'baseline', time: 8, text: "好的。平时周末你一般几点起床？" },
             { id: 3, type: 'stress', time: 10, text: POOL_STRESS[Math.floor(Math.random()*POOL_STRESS.length)] },
-            { id: 4, type: 'stress', time: 10, text: "你在撒谎吗？为什么你刚才的表情不对劲？" }
+            { id: 4, type: 'stress', time: 10, text: "请诚实回答：你刚才在回答问题时是否感到心虚？" }
         ];
 
         document.getElementById('layer_start').classList.add('hidden');
@@ -218,31 +239,25 @@
             });
             camera.start();
 
-            setTimeout(() => runQuestion(0), 3000);
-        } catch (e) { alert("摄像头启动失败"); }
+            setTimeout(() => runQuestion(0), 2000);
+        } catch (e) { alert("无法访问摄像头，请检查权限设置"); }
     }
 
     // --- 流程控制 ---
     function runQuestion(index) {
         if (index >= SCRIPT.length) { generateReport(); return; }
 
-        // 关键逻辑：如果是基准期结束，拍一张正常的
         if (index === 2 && !evidence.baseline) captureEvidence('baseline');
 
         currentQ = SCRIPT[index];
-        // 重置当题统计，保留基准数据
         const oldBase = tempStats.baseEyeHeight;
-        tempStats = { 
-            blinks: 0, noseTouchCount: 0, chinTouchCount: 0, fidgetCount: 0, shockCount: 0, 
-            frames: 0, lastEyeOpen: true, baseEyeHeight: oldBase 
-        };
+        tempStats = { blinks: 0, noseTouchCount: 0, chinTouchCount: 0, fidgetCount: 0, shockCount: 0, frames: 0, lastEyeOpen: true, baseEyeHeight: oldBase };
 
-        // UI
+        // UI 更新
         const isBase = currentQ.type === 'baseline';
         const badge = document.getElementById('hud_badge');
         badge.innerText = isBase ? `BASELINE #${currentQ.id}` : `STRESS TEST #${currentQ.id}`;
         badge.style.color = isBase ? 'var(--accent)' : 'var(--danger)';
-        badge.style.borderColor = isBase ? 'var(--accent)' : 'var(--danger)';
         
         document.getElementById('hud_text').innerText = currentQ.text;
         
@@ -262,11 +277,10 @@
     }
 
     function saveData() {
-        const cpm = Math.round(tempStats.blinks / (currentQ.time / 60));
-        sessionData.push({ q: currentQ, stats: { ...tempStats, blinkRate: cpm } });
+        sessionData.push({ q: currentQ, stats: { ...tempStats } });
     }
 
-    // --- AI 核心分析 (Logic V18) ---
+    // --- 核心分析逻辑 ---
     const canvas = document.getElementById('main_canvas');
     const ctx = canvas.getContext('2d');
     const sideCtx = {
@@ -276,7 +290,6 @@
     };
 
     function onResults(results) {
-        // 渲染
         const video = document.getElementById('src_video');
         const vW = video.videoWidth; const vH = video.videoHeight;
         if(vW) {
@@ -286,93 +299,78 @@
 
         if (!results.faceLandmarks) { ctx.restore(); return; }
 
-        // --- 1. 面部关键点提取 ---
         const face = results.faceLandmarks;
-        const noseTip = face[1];      // 鼻尖
-        const chinTip = face[152];    // 下巴底
-        const leftEyeTop = face[159]; const leftEyeBot = face[145];
-        const eyeHeight = Math.abs(leftEyeTop.y - leftEyeBot.y);
+        const noseTip = face[1]; const chinTip = face[152];
+        const eyeHeight = Math.abs(face[159].y - face[145].y);
 
-        // 基准数据积累
         if (currentQ && currentQ.type === 'baseline') {
             tempStats.baseEyeHeight = (tempStats.baseEyeHeight * tempStats.frames + eyeHeight) / (tempStats.frames + 1);
         }
 
-        // 绘制辅助线 (眼睛/下巴/鼻子)
         drawConnectors(ctx, face, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
 
-        // --- 2. 逻辑判定 ---
-        let currentAnomalyScore = 0; // 当前帧异常分，用于触发抓拍
-        const tags = { nose: false, chin: false, fidget: false, shock: false };
+        let anomalyScore = 0;
+        const tags = { nose: false, chin: false, fidget: false, shock: false, cross: false };
 
-        // A. 惊讶 (Shock) - 瞪眼
-        // 逻辑：如果当前眼睛开合度 > 基准值的 1.3 倍
+        // 1. 惊讶检测
         if (currentQ && currentQ.type === 'stress' && tempStats.baseEyeHeight > 0) {
             if (eyeHeight > tempStats.baseEyeHeight * 1.35) {
-                tags.shock = true;
-                tempStats.shockCount++;
-                currentAnomalyScore += 5;
+                tags.shock = true; tempStats.shockCount++; anomalyScore += 5;
             }
         }
 
-        // B. 手部交互 (Hand-Face Interaction)
-        const checkHandFace = (hand) => {
+        // 2. 手部逻辑
+        const checkHand = (hand) => {
             if (!hand) return;
-            const indexTip = hand[8]; // 食指尖
-            const thumbTip = hand[4]; // 拇指尖
-
-            // B1. 摸鼻子 (Lying/Pinocchio)
-            // 简单距离计算: 食指尖 到 鼻尖
-            const distNose = Math.sqrt(Math.pow(indexTip.x - noseTip.x, 2) + Math.pow(indexTip.y - noseTip.y, 2));
-            if (distNose < 0.05) { // 阈值需调试
-                tags.nose = true;
-                tempStats.noseTouchCount++;
-                currentAnomalyScore += 10;
-                // 画红圈
-                ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 20, 0, 2*Math.PI);
+            const index = hand[8]; const thumb = hand[4];
+            
+            // 摸鼻
+            if (Math.sqrt(Math.pow(index.x - noseTip.x, 2) + Math.pow(index.y - noseTip.y, 2)) < 0.05) {
+                tags.nose = true; tempStats.noseTouchCount++; anomalyScore += 10;
+                ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 30, 0, 2*Math.PI);
                 ctx.strokeStyle = 'var(--danger)'; ctx.lineWidth = 3; ctx.stroke();
             }
-
-            // B2. 摸下巴 (Evaluating)
-            const distChin = Math.sqrt(Math.pow(indexTip.x - chinTip.x, 2) + Math.pow(indexTip.y - chinTip.y, 2));
-            if (distChin < 0.08 && !tags.nose) { // 避免误判
-                tags.chin = true;
-                tempStats.chinTouchCount++;
-                currentAnomalyScore += 3;
+            // 摸下巴
+            else if (Math.sqrt(Math.pow(index.x - chinTip.x, 2) + Math.pow(index.y - chinTip.y, 2)) < 0.08) {
+                tags.chin = true; tempStats.chinTouchCount++; anomalyScore += 3;
             }
-
-            // B3. 手指搓动 (Fidgeting)
-            // 拇指尖 到 食指尖 的距离
-            const distPinch = Math.sqrt(Math.pow(indexTip.x - thumbTip.x, 2) + Math.pow(indexTip.y - thumbTip.y, 2));
-            if (distPinch < 0.03) { // 捏在一起
-                 tags.fidget = true;
-                 tempStats.fidgetCount++;
-                 currentAnomalyScore += 2;
+            // 搓手指
+            if (Math.sqrt(Math.pow(index.x - thumb.x, 2) + Math.pow(index.y - thumb.y, 2)) < 0.03) {
+                tags.fidget = true; tempStats.fidgetCount++; anomalyScore += 2;
             }
         };
 
-        if (results.leftHandLandmarks) checkHandFace(results.leftHandLandmarks);
-        if (results.rightHandLandmarks) checkHandFace(results.rightHandLandmarks);
+        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks);
+        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks);
 
-        // --- 3. UI 反馈与抓拍 ---
-        // 更新右上角标签显示状态
+        // 3. 抱胸检测
+        if(results.poseLandmarks) {
+             const pose = results.poseLandmarks;
+             const lWrist = pose[15]; const rWrist = pose[16];
+             const lShldr = pose[11]; const rHip = pose[24];
+             // 简单判定：手腕在躯干高度范围内，且水平距离近
+             if (lWrist.y > lShldr.y && lWrist.y < rHip.y && Math.abs(lWrist.x - rWrist.x) < 0.15) {
+                 tags.cross = true; anomalyScore += 4;
+             }
+        }
+
+        // 更新标签状态
         document.getElementById('tag_nose').className = `tag danger ${tags.nose ? 'active' : ''}`;
         document.getElementById('tag_chin').className = `tag warn ${tags.chin ? 'active' : ''}`;
         document.getElementById('tag_fidget').className = `tag warn ${tags.fidget ? 'active' : ''}`;
         document.getElementById('tag_shock').className = `tag info ${tags.shock ? 'active' : ''}`;
+        document.getElementById('tag_cross').className = `tag danger ${tags.cross ? 'active' : ''}`;
 
-        // 智能抓拍：如果处于压力期，且当前异常分极高，且之前没拍过更狠的
-        if (currentQ && currentQ.type === 'stress' && currentAnomalyScore > evidence.maxScore) {
-            evidence.maxScore = currentAnomalyScore;
-            captureEvidence('anomaly'); // 覆盖抓拍最“精彩”的一瞬间
+        // 智能抓拍
+        if (currentQ && currentQ.type === 'stress' && anomalyScore > evidence.maxScore) {
+            evidence.maxScore = anomalyScore;
+            captureEvidence('anomaly');
         }
 
         ctx.restore();
-        
-        // 侧边栏
-        drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#00f2ff');
+        drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#007aff');
         drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#fff');
-        drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#ff2a6d');
+        drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#ff3b30');
 
         if(currentQ) tempStats.frames++;
     }
@@ -386,24 +384,21 @@
     function generateReport() {
         document.getElementById('layer_report').classList.remove('hidden');
         
-        // 1. 证据图片填充
         const evArea = document.getElementById('evidence_area');
-        // 逻辑修复：如果没有抓拍到异常，就显示一张空白占位或最后一张
         const imgBase = evidence.baseline || "";
-        const imgAnom = evidence.anomaly || imgBase; // 如果没异常，就用基准图代替，避免空白
+        const imgAnom = evidence.anomaly || imgBase; 
         
         evArea.innerHTML = `
             <div class="photo-card">
                 <img src="${imgBase}" class="photo-img">
-                <div class="photo-meta" style="color:var(--accent)">基准状态 (Relaxed)</div>
+                <div class="photo-meta" style="color:var(--accent)">基准状态 (Baseline)</div>
             </div>
             <div class="photo-card" style="border-color:var(--danger)">
                 <img src="${imgAnom}" class="photo-img">
-                <div class="photo-meta" style="color:var(--danger)">压力反应 / 异常 (Stress)</div>
+                <div class="photo-meta" style="color:var(--danger)">压力反应 (Reaction)</div>
             </div>
         `;
 
-        // 2. 日志列表
         const logArea = document.getElementById('log_area');
         let html = "";
         
@@ -411,19 +406,17 @@
             const isStress = d.q.type === 'stress';
             let signals = [];
             
-            if (d.stats.noseTouchCount > 5) signals.push("频繁摸鼻 (掩饰)");
-            if (d.stats.chinTouchCount > 10) signals.push("摸下巴 (评估)");
-            if (d.stats.shockCount > 5) signals.push("瞳孔/眼睑异常扩张 (惊讶)");
-            if (d.stats.fidgetCount > 20) signals.push("手指高频搓动 (焦虑)");
+            if (d.stats.noseTouchCount > 5) signals.push("触碰面部掩饰");
+            if (d.stats.chinTouchCount > 10) signals.push("触碰下巴评估");
+            if (d.stats.shockCount > 5) signals.push("眼部惊讶反应");
+            if (d.stats.fidgetCount > 20) signals.push("手部焦虑摩挲");
 
             const hasSignal = signals.length > 0;
-            const colorClass = isStress && hasSignal ? "val-danger" : "";
-
             html += `
                 <div class="log-item ${d.q.type}">
-                    <div style="font-size:10px; color:#666; margin-bottom:5px">${d.q.type.toUpperCase()}</div>
-                    <div style="font-weight:bold; margin-bottom:10px">"${d.q.text}"</div>
-                    ${hasSignal ? `<div style="color:var(--danger); font-size:12px; font-weight:bold">⚠ DETECTED: ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#666">未检测到明显异常</div>'}
+                    <div style="font-size:10px; color:#888; margin-bottom:5px">${d.q.type.toUpperCase()}</div>
+                    <div style="font-size:14px; color:#fff; font-weight:600; margin-bottom:8px">"${d.q.text}"</div>
+                    ${hasSignal ? `<div style="color:#ff8a84; font-size:12px; font-weight:bold">⚠ 检测到: ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#666">行为反应平稳</div>'}
                 </div>
             `;
         });
