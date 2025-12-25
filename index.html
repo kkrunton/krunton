@@ -3,198 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V11 - Mobile Perfect</title>
+    <title>MindReader V12 - Fixed</title>
     <style>
-        /* --- 1. 基础设置 --- */
+        /* --- 1. 核心修复样式 --- */
         :root {
-            --glass-bg: rgba(30, 30, 30, 0.8);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --accent-color: #00f2ff;
-            --danger-color: #ff3366;
-            --text-main: #ffffff;
-            --bg-dark: #0a0a0a;
+            --bg-color: #050505;
+            --card-bg: rgba(30, 30, 30, 0.6);
+            --accent: #00f2ff;
         }
 
         body {
-            background-color: var(--bg-dark);
-            background-image: linear-gradient(to bottom, #1a1a2e, #000000);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            background: var(--bg-color);
+            color: #fff;
+            font-family: -apple-system, sans-serif;
             margin: 0;
-            height: 100dvh; /* 使用动态视口高度 */
+            height: 100vh; /* 强制视口高度 */
+            height: 100dvh; /* 动态高度适配 iOS */
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; /* 禁止页面滚动 */
         }
 
-        /* --- 2. 新版布局结构 --- */
+        /* --- 布局容器 --- */
         .app-container {
-            display: flex;
             flex: 1;
-            flex-direction: column; /* 默认垂直排列，适应移动端优先 */
-            height: 100%;
-            position: relative;
-            padding-bottom: 80px; /* 为悬浮按钮留出空间 */
-            box-sizing: border-box;
-        }
-
-        /* 顶部 HUD (分析结果栏) - 不再悬浮，而是固定在顶部 */
-        .top-hud {
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 15px 20px;
             display: flex;
             flex-direction: column;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 1. 顶部 HUD (固定高度) */
+        .top-hud {
+            height: 70px;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between; /* 两端对齐 */
             align-items: center;
-            justify-content: center;
+            padding: 0 20px;
             z-index: 50;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            flex-shrink: 0; /* 防止被压缩 */
+            flex-shrink: 0; /* 禁止被压缩 */
+        }
+        
+        .hud-info { display: flex; flex-direction: column; }
+        .status-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-text { font-size: 10px; color: #888; }
+        .result-text { font-size: 16px; font-weight: bold; color: #fff; }
+
+        /* 相机切换小按钮 */
+        .cam-switch {
+            background: #333; border: 1px solid #555; color: #fff;
+            padding: 5px 10px; border-radius: 5px; font-size: 10px;
         }
 
-        .status-row {
-            display: flex;
-            align-items: center;
-            font-size: 12px;
-            color: rgba(255,255,255,0.7);
-            margin-bottom: 5px;
-        }
-
-        .status-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: var(--accent-color);
-            margin-right: 8px; animation: pulse 2s infinite;
-        }
-
-        .result-text {
-            font-size: 18px; font-weight: 700; letter-spacing: 0.5px; text-align: center;
-        }
-
-        /* 中间内容区 (包含主舞台和侧边栏) */
-        .content-body {
-            flex: 1;
-            display: flex;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* 主舞台 */
+        /* 2. 中间主舞台 (自适应高度) */
         .stage {
-            flex: 1;
+            flex: 1; /* 占据剩余所有空间 */
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
-            padding: 20px;
+            overflow: hidden;
+            background: #000;
         }
 
-        /* 核心画布 */
+        /* 修复：画布自适应，保持比例，不超出屏幕 */
         #output_canvas {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
-        /* 侧边栏预览区 */
+        /* 3. 底部侧边栏 (固定高度，修复显示不全) */
         .sidebar {
-            width: 220px;
-            background: rgba(20, 20, 20, 0.5);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-left: 1px solid var(--glass-border);
+            height: 110px; /* 固定高度 */
+            background: #111;
+            border-top: 1px solid #333;
             display: flex;
-            flex-direction: column;
-            padding: 15px;
-            gap: 15px;
-            overflow-y: auto;
+            flex-direction: row;
+            padding: 10px;
+            gap: 10px;
+            flex-shrink: 0; /* 关键：禁止被挤压 */
+            overflow-x: auto; /* 允许横向滚动 */
+            z-index: 40;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom)); /* 适配 iPhone 黑条 */
         }
 
         .preview-card {
-            aspect-ratio: 4/3;
-            background: rgba(0,0,0,0.3);
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
+            flex: 1;
+            background: #222;
+            border-radius: 8px;
+            border: 1px solid #444;
             position: relative;
-            overflow: hidden;
+            min-width: 80px; /* 防止太窄 */
         }
-
-        .preview-label {
-            position: absolute; top: 5px; left: 8px; font-size: 9px; font-weight: 700;
-            color: rgba(255,255,255,0.5); text-transform: uppercase;
-        }
-        
+        
+        .card-label { position: absolute; top: 2px; left: 4px; font-size: 8px; color: #aaa; }
         .side-canvas { width: 100%; height: 100%; }
 
-        /* --- 3. 全新悬浮按钮 (FAB) --- */
+        /* 4. 悬浮按钮 (FAB) */
         .fab-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 64px;
-            height: 64px;
+            position: absolute;
+            bottom: 130px; /* 位于侧边栏上方 */
+            right: 20px;
+            width: 56px; height: 56px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-color), #00c3ff);
+            background: var(--accent);
             border: none;
-            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.4);
+            z-index: 100;
             display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.4);
-            cursor: pointer;
-            z-index: 100; /* 最高层级 */
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 回弹动画 */
-            animation: float 3s ease-in-out infinite;
         }
-
-        .fab-btn:active { transform: scale(0.9); }
-        
-        /* 按钮光晕动画 */
-        @keyframes float {
-            0%, 100% { transform: translateY(0); box-shadow: 0 10px 30px rgba(0, 242, 255, 0.4); }
-            50% { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0, 242, 255, 0.6); }
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 242, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
-        }
-
-        /* --- 4. 桌面端适配 (大屏时恢复左右布局) --- */
-        @media screen and (min-width: 769px) {
-            .top-hud {
-                position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-                width: auto; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(30,30,30,0.7);
-            }
-            .app-container { padding-bottom: 0; flex-direction: row; }
-            .content-body { flex-direction: row; }
-            .stage { padding: 80px 20px 20px 20px; } /* 给顶部HUD留位置 */
-            .sidebar { flex-direction: column; width: 240px; height: 100%; border-left: 1px solid var(--glass-border); border-top: none; }
-            .fab-btn { bottom: 40px; right: 40px; width: 72px; height: 72px; }
-        }
-
-        /* --- 5. 移动端专项优化 --- */
-        @media screen and (max-width: 768px) {
-            .content-body {
-                flex-direction: column; /* 手机上垂直排列：主图在上，预览在下 */
-            }
-            .stage {
-                flex: 3; /* 主图占更多空间 */
-                max-height: 60vh; /* 限制最大高度，防止挤没预览图 */
-                padding: 10px;
-            }
-            .sidebar {
-                flex: 2;
-                width: 100%;
-                flex-direction: row; /* 预览图横向排布 */
-                border-left: none;
-                border-top: 1px solid var(--glass-border);
-                background: rgba(15, 15, 15, 0.8);
-                gap: 10px;
-                padding: 10px 15px 80px 15px; /* 底部加 padding 防止被 FAB 遮挡 */
-            }
-            .preview-card { flex: 1; aspect-ratio: 1/1; } /* 方形预览图 */
-            .fab-btn { bottom: 20px; right: 20px; }
+        
+        /* 隐藏元素但保留渲染能力 (修复 iOS Bug) */
+        .hidden-source {
+            position: absolute;
+            top: 0; left: 0;
+            width: 1px; height: 1px;
+            opacity: 0;
+            pointer-events: none;
         }
     </style>
 
@@ -207,116 +136,171 @@
 
 <div class="app-container">
     <div class="top-hud">
-        <div class="status-row">
-            <span class="status-dot" id="status_dot"></span>
-            <span id="status_text">系统就绪</span>
+        <div class="hud-info">
+            <div class="status-row"><span class="status-dot" id="dot"></span><span class="status-text" id="status">系统就绪</span></div>
+            <div class="result-text" id="result">等待输入</div>
         </div>
-        <div class="result-text" id="result_text">请上传人像照片</div>
+        <button class="cam-switch" onclick="toggleCamera()">切换相机</button>
     </div>
 
-    <div class="content-body">
-        <div class="stage">
-            <video id="hidden_video" style="display:none"></video>
-            <img id="hidden_img" style="display:none"> 
-            <canvas id="output_canvas"></canvas>
-        </div>
+    <div class="stage">
+        <canvas id="output_canvas"></canvas>
+    </div>
 
-        <div class="sidebar">
-            <div class="preview-card">
-                <span class="preview-label">Face Mesh</span>
-                <canvas id="c_face" class="side-canvas"></canvas>
-            </div>
-            <div class="preview-card">
-                <span class="preview-label">Body Pose</span>
-                <canvas id="c_pose" class="side-canvas"></canvas>
-            </div>
-            <div class="preview-card">
-                <span class="preview-label">Hands</span>
-                <canvas id="c_hands" class="side-canvas"></canvas>
-            </div>
-        </div>
+    <div class="sidebar">
+        <div class="preview-card"><span class="card-label">FACE</span><canvas id="cv_face" class="side-canvas"></canvas></div>
+        <div class="preview-card"><span class="card-label">POSE</span><canvas id="cv_pose" class="side-canvas"></canvas></div>
+        <div class="preview-card"><span class="card-label">HANDS</span><canvas id="cv_hands" class="side-canvas"></canvas></div>
     </div>
 </div>
 
+<video id="src_video" class="hidden-source" playsinline></video>
+<img id="src_img" class="hidden-source">
+
 <input type="file" id="file_input" accept="image/*" style="display: none;">
-<button class="fab-btn" onclick="document.getElementById('file_input').click()" title="上传照片">
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-        <circle cx="12" cy="13" r="4"></circle>
-    </svg>
+<button class="fab-btn" onclick="document.getElementById('file_input').click()">
+    📷
 </button>
 
 <script>
-window.onload = function() {
-    const img = document.getElementById('hidden_img');
+    // 1. 绑定元素
+    const video = document.getElementById('src_video');
+    const img = document.getElementById('src_img');
     const canvas = document.getElementById('output_canvas');
     const ctx = canvas.getContext('2d');
-    const statusText = document.getElementById('status_text');
-    const resultText = document.getElementById('result_text');
-    const statusDot = document.getElementById('status_dot');
-    const fabBtn = document.querySelector('.fab-btn');
-    
+    const statusText = document.getElementById('status');
+    const resultText = document.getElementById('result');
+    const dot = document.getElementById('dot');
+    
     const sideCtx = {
-        face: document.getElementById('c_face').getContext('2d'),
-        pose: document.getElementById('c_pose').getContext('2d'),
-        hands: document.getElementById('c_hands').getContext('2d')
+        face: document.getElementById('cv_face').getContext('2d'),
+        pose: document.getElementById('cv_pose').getContext('2d'),
+        hands: document.getElementById('cv_hands').getContext('2d')
     };
 
-    function runAnalysis(results) {
-        let msg = "正常交互状态"; 
-        let isDanger = false;
+    let cameraObj = null;
+    let isCameraMode = false;
 
+    // 2. 核心分析
+    function onResults(results) {
+        statusText.innerText = "分析完成";
+        
+        // 动态调整画布尺寸
+        const width = isCameraMode ? video.videoWidth : img.naturalWidth;
+        const height = isCameraMode ? video.videoHeight : img.naturalHeight;
+        
+        if (width > 0 && height > 0) {
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.save();
+            ctx.clearRect(0, 0, width, height);
+            
+            // 绘制背景
+            if (isCameraMode) {
+                ctx.drawImage(video, 0, 0, width, height);
+            } else {
+                ctx.drawImage(img, 0, 0, width, height);
+            }
+
+            // 绘制骨架 (更清晰的配色)
+            drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#00ffff22', lineWidth: 1});
+            drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffff00', lineWidth: 2});
+            drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ff', lineWidth: 2});
+            drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ff', lineWidth: 2});
+            ctx.restore();
+
+            // 侧边栏
+            drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#0ff');
+            drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#ff0');
+            drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#f0f');
+
+            // 逻辑判断
+            analyze(results);
+        }
+    }
+
+    function analyze(results) {
         if (results.faceLandmarks) {
-            const mouth = results.faceLandmarks[13]; 
-            let isCovering = false;
+            const mouth = results.faceLandmarks[13];
+            let cover = false;
             const check = (hand) => {
                 if(!hand) return false;
-                const tip = hand[8];
-                // 稍微放宽一点阈值，适应不同照片比例
-                return Math.sqrt(Math.pow(mouth.x - tip.x, 2) + Math.pow(mouth.y - tip.y, 2)) < 0.18;
+                return Math.sqrt(Math.pow(mouth.x - hand[8].x, 2) + Math.pow(mouth.y - hand[8].y, 2)) < 0.15;
             };
-            if (check(results.leftHandLandmarks) || check(results.rightHandLandmarks)) isCovering = true;
+            if(check(results.leftHandLandmarks) || check(results.rightHandLandmarks)) cover = true;
 
-            if (isCovering) {
-                msg = "⚠️ 警告：检测到手部遮挡口部 (可能掩饰)";
-                isDanger = true;
+            if(cover) {
+                resultText.innerText = "⚠️ 检测到遮挡 (掩饰)";
+                resultText.style.color = "#ff3366";
+            } else {
+                resultText.innerText = "状态正常";
+                resultText.style.color = "#fff";
             }
         } else {
-            msg = "未检测到清晰人脸";
+            resultText.innerText = "未检测到人脸";
+            resultText.style.color = "#aaa";
         }
-        
-        resultText.innerText = msg;
-        if (isDanger) {
-            resultText.style.color = "var(--danger-color)";
-            statusDot.style.background = "var(--danger-color)";
-            fabBtn.style.background = "linear-gradient(135deg, var(--danger-color), #ff5e00)"; // 按钮变红
+    }
+
+    function drawSide(c, data, conn, color) {
+        c.canvas.width = 200; c.canvas.height = 200;
+        c.clearRect(0,0,200,200);
+        if(data) {
+            drawConnectors(c, data, conn, {color: color, lineWidth: 2});
+        }
+    }
+
+    // 3. 初始化 AI
+    const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
+    holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5});
+    holistic.onResults(onResults);
+
+    // 4. 图片上传处理 (修复版)
+    document.getElementById('file_input').onchange = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        
+        isCameraMode = false;
+        if(cameraObj) cameraObj.stop(); // 停止相机
+
+        statusText.innerText = "正在处理图片...";
+        
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            img.src = evt.target.result;
+            // 等待图片解码完成
+            img.onload = async () => {
+                await holistic.send({image: img});
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // 5. 相机切换逻辑
+    window.toggleCamera = async function() {
+        isCameraMode = !isCameraMode;
+        if (isCameraMode) {
+            statusText.innerText = "启动相机中...";
+            if (!cameraObj) {
+                cameraObj = new Camera(video, {
+                    onFrame: async () => { await holistic.send({image: video}); },
+                    width: 640, height: 480
+                });
+            }
+            try {
+                await cameraObj.start();
+                statusText.innerText = "相机运行中";
+            } catch(e) {
+                alert("无法启动相机，请检查权限或使用HTTPS");
+                isCameraMode = false;
+            }
         } else {
-            resultText.style.color = "var(--text-main)";
-            statusDot.style.background = "var(--accent-color)";
-            fabBtn.style.background = "linear-gradient(135deg, var(--accent-color), #00c3ff)"; // 按钮恢复蓝
+            if(cameraObj) cameraObj.stop();
+            statusText.innerText = "已切换回图片模式";
         }
     }
+</script>
+</body>
+</html>
 
-    function drawSkeleton(c, landmarks, conn, color) {
-        c.canvas.width = 300; c.canvas.height = 300;
-        c.clearRect(0,0,300,300);
-        if(landmarks) {
-            c.save();
-            drawConnectors(c, landmarks, conn, {color: color, lineWidth: 3});
-            c.restore();
-        }
-    }
-
-    function onResults(results) {
-        statusText.innerText = "AI 计算完毕";
-        statusDot.style.animation = "none"; // 停止闪烁
-        
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-
-        ctx.save();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (img.src && img.complete) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // 主图绘制风格优化：更细的线，更低的透明度，突出主体
-        draw
