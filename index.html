@@ -3,130 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V12 - Fixed</title>
+    <title>MindReader V13 - Interrogator</title>
     <style>
-        /* --- 1. 核心修复样式 --- */
-        :root {
-            --bg-color: #050505;
-            --card-bg: rgba(30, 30, 30, 0.6);
-            --accent: #00f2ff;
+        /* --- 1. 基础架构 --- */
+        :root { --bg: #000; --panel: rgba(20,20,20,0.9); --accent: #00f2ff; --warn: #ffcc00; --danger: #ff3366; }
+        body { background: var(--bg); color: #fff; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, sans-serif; }
+
+        /* --- 2. 顶部提问卡片 (核心交互区) --- */
+        .question-card {
+            height: 140px; background: var(--panel); border-bottom: 1px solid #333;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 10px 20px; z-index: 50; flex-shrink: 0; position: relative;
+        }
+        .phase-badge { 
+            font-size: 10px; text-transform: uppercase; letter-spacing: 1px; 
+            padding: 2px 8px; border-radius: 4px; margin-bottom: 10px; background: #333; color: #888;
+        }
+        .question-text { 
+            font-size: 18px; font-weight: bold; text-align: center; line-height: 1.4;
+            min-height: 50px; display: flex; align-items: center;
+        }
+        .timer-bar { 
+            position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent); 
+            width: 0%; transition: width 1s linear; 
         }
 
-        body {
-            background: var(--bg-color);
-            color: #fff;
-            font-family: -apple-system, sans-serif;
-            margin: 0;
-            height: 100vh; /* 强制视口高度 */
-            height: 100dvh; /* 动态高度适配 iOS */
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* 禁止页面滚动 */
+        /* --- 3. 实时扫描反馈区 (Zone A/B/C) --- */
+        .scan-overlay {
+            position: absolute; top: 10px; right: 10px; width: 120px;
+            display: flex; flex-direction: column; gap: 5px; pointer-events: none;
         }
+        .alert-tag {
+            background: rgba(255, 51, 102, 0.2); border: 1px solid var(--danger);
+            color: var(--danger); font-size: 10px; padding: 4px 8px; border-radius: 4px;
+            display: none; /* 默认隐藏，触发时显示 */
+            animation: flash 0.5s infinite alternate;
+        }
+        @keyframes flash { from { opacity: 0.5; } to { opacity: 1; } }
 
-        /* --- 布局容器 --- */
-        .app-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
+        /* --- 4. 主舞台 --- */
+        .stage { flex: 1; position: relative; background: #050505; display: flex; justify-content: center; align-items: center; }
+        #output_canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* 1. 顶部 HUD (固定高度) */
-        .top-hud {
-            height: 70px;
-            background: rgba(0,0,0,0.8);
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between; /* 两端对齐 */
-            align-items: center;
-            padding: 0 20px;
-            z-index: 50;
-            flex-shrink: 0; /* 禁止被压缩 */
-        }
-        
-        .hud-info { display: flex; flex-direction: column; }
-        .status-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .status-text { font-size: 10px; color: #888; }
-        .result-text { font-size: 16px; font-weight: bold; color: #fff; }
-
-        /* 相机切换小按钮 */
-        .cam-switch {
-            background: #333; border: 1px solid #555; color: #fff;
-            padding: 5px 10px; border-radius: 5px; font-size: 10px;
-        }
-
-        /* 2. 中间主舞台 (自适应高度) */
-        .stage {
-            flex: 1; /* 占据剩余所有空间 */
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            background: #000;
-        }
-
-        /* 修复：画布自适应，保持比例，不超出屏幕 */
-        #output_canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        /* 3. 底部侧边栏 (固定高度，修复显示不全) */
-        .sidebar {
-            height: 110px; /* 固定高度 */
-            background: #111;
-            border-top: 1px solid #333;
-            display: flex;
-            flex-direction: row;
-            padding: 10px;
-            gap: 10px;
-            flex-shrink: 0; /* 关键：禁止被挤压 */
-            overflow-x: auto; /* 允许横向滚动 */
-            z-index: 40;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom)); /* 适配 iPhone 黑条 */
-        }
-
-        .preview-card {
-            flex: 1;
-            background: #222;
-            border-radius: 8px;
-            border: 1px solid #444;
-            position: relative;
-            min-width: 80px; /* 防止太窄 */
-        }
-        
-        .card-label { position: absolute; top: 2px; left: 4px; font-size: 8px; color: #aaa; }
+        /* --- 5. 底部侧边栏 --- */
+        .sidebar { height: 100px; background: #111; border-top: 1px solid #333; display: flex; padding: 10px; gap: 10px; flex-shrink: 0; overflow-x: auto; }
+        .preview-card { flex: 1; background: #222; border-radius: 6px; min-width: 80px; position: relative; border: 1px solid #444; }
+        .card-label { position: absolute; top: 2px; left: 4px; font-size: 8px; color: #666; }
         .side-canvas { width: 100%; height: 100%; }
 
-        /* 4. 悬浮按钮 (FAB) */
+        /* --- 6. 控制按钮 --- */
         .fab-btn {
-            position: absolute;
-            bottom: 130px; /* 位于侧边栏上方 */
-            right: 20px;
-            width: 56px; height: 56px;
-            border-radius: 50%;
-            background: var(--accent);
-            border: none;
-            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.4);
-            z-index: 100;
-            display: flex; justify-content: center; align-items: center;
+            position: absolute; bottom: 120px; right: 20px;
+            padding: 12px 24px; border-radius: 30px; font-weight: bold;
+            background: var(--accent); color: #000; border: none;
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3); z-index: 100;
         }
-        
-        /* 隐藏元素但保留渲染能力 (修复 iOS Bug) */
-        .hidden-source {
-            position: absolute;
-            top: 0; left: 0;
-            width: 1px; height: 1px;
-            opacity: 0;
-            pointer-events: none;
-        }
-    </style>
+        .fab-btn.running { background: #333; color: #fff; pointer-events: none; }
 
+        /* 隐形源 */
+        .hidden { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -134,173 +70,295 @@
 </head>
 <body>
 
-<div class="app-container">
-    <div class="top-hud">
-        <div class="hud-info">
-            <div class="status-row"><span class="status-dot" id="dot"></span><span class="status-text" id="status">系统就绪</span></div>
-            <div class="result-text" id="result">等待输入</div>
-        </div>
-        <button class="cam-switch" onclick="toggleCamera()">切换相机</button>
-    </div>
-
-    <div class="stage">
-        <canvas id="output_canvas"></canvas>
-    </div>
-
-    <div class="sidebar">
-        <div class="preview-card"><span class="card-label">FACE</span><canvas id="cv_face" class="side-canvas"></canvas></div>
-        <div class="preview-card"><span class="card-label">POSE</span><canvas id="cv_pose" class="side-canvas"></canvas></div>
-        <div class="preview-card"><span class="card-label">HANDS</span><canvas id="cv_hands" class="side-canvas"></canvas></div>
-    </div>
+<div class="question-card">
+    <div class="phase-badge" id="phase_badge">准备就绪</div>
+    <div class="question-text" id="q_text">请确保被测对象位于画面中央<br>点击下方按钮开始心理测试</div>
+    <div class="timer-bar" id="timer_bar"></div>
 </div>
 
-<video id="src_video" class="hidden-source" playsinline></video>
-<img id="src_img" class="hidden-source">
+<div class="stage">
+    <div class="scan-overlay" id="alert_box">
+        <div class="alert-tag" id="alert_blink">ZONE A: 眨眼爆发</div>
+        <div class="alert-tag" id="alert_lip">ZONE A: 嘴唇消失</div>
+        <div class="alert-tag" id="alert_touch">ZONE B: 抚摸后颈</div>
+        <div class="alert-tag" id="alert_freeze">ZONE B: 动作冻结</div>
+        <div class="alert-tag" id="alert_shrug">ZONE C: 龟缩反应</div>
+        <div class="alert-tag" id="alert_turn">ZONE C: 躯干逃离</div>
+    </div>
+    <canvas id="output_canvas"></canvas>
+</div>
 
+<div class="sidebar">
+    <div class="preview-card"><span class="card-label">FACE</span><canvas id="cv_face" class="side-canvas"></canvas></div>
+    <div class="preview-card"><span class="card-label">POSE</span><canvas id="cv_pose" class="side-canvas"></canvas></div>
+    <div class="preview-card"><span class="card-label">HANDS</span><canvas id="cv_hands" class="side-canvas"></canvas></div>
+</div>
+
+<video id="src_video" class="hidden" playsinline></video>
+<img id="src_img" class="hidden">
 <input type="file" id="file_input" accept="image/*" style="display: none;">
-<button class="fab-btn" onclick="document.getElementById('file_input').click()">
-    📷
-</button>
+
+<button class="fab-btn" id="main_btn">开始测试 (上传照片)</button>
 
 <script>
-    // 1. 绑定元素
+    // --- 配置 ---
+    const QUESTIONS = [
+        { text: "1. 请看着镜头，随便聊聊今天天气怎么样？", time: 5, type: "baseline" }, // 基准 5秒
+        { text: "2. 您平时放松的时候手喜欢放在哪里？", time: 5, type: "baseline" }, // 基准 5秒
+        { text: "3. 最近一次睡个好觉是什么时候？", time: 5, type: "baseline" }, // 基准 5秒
+        { text: "⚠️ 关键提问：\n如果你母亲和女友同时掉河里，你救谁？", time: 8, type: "stress" } // 施压 8秒
+    ];
+
+    // --- 状态变量 ---
+    let currentState = "idle"; // idle, running, finished
+    let currentQIndex = 0;
+    let baselineStats = { blinkRate: 0, shoulderY: 0, handVel: 0 };
+    let frameCount = 0;
+    let blinkCount = 0;
+    let lastEyeAspect = 0;
+    let lastHandPos = null;
+
+    // --- DOM ---
+    const qText = document.getElementById('q_text');
+    const pBadge = document.getElementById('phase_badge');
+    const tBar = document.getElementById('timer_bar');
+    const mainBtn = document.getElementById('main_btn');
+    const alerts = {
+        blink: document.getElementById('alert_blink'),
+        lip: document.getElementById('alert_lip'),
+        touch: document.getElementById('alert_touch'),
+        freeze: document.getElementById('alert_freeze'),
+        shrug: document.getElementById('alert_shrug'),
+        turn: document.getElementById('alert_turn')
+    };
+    
+    // --- 核心逻辑 ---
+
+    // 1. 启动测试流程
+    function startInterview() {
+        currentState = "running";
+        currentQIndex = 0;
+        baselineStats = { blinkRate: 0, shoulderY: 0, handVel: 0 };
+        mainBtn.classList.add('running');
+        mainBtn.innerText = "测试进行中...";
+        nextQuestion();
+    }
+
+    // 2. 切换问题
+    function nextQuestion() {
+        if (currentQIndex >= QUESTIONS.length) {
+            endInterview();
+            return;
+        }
+
+        const q = QUESTIONS[currentQIndex];
+        qText.innerText = q.text;
+        
+        // UI 状态更新
+        if (q.type === 'baseline') {
+            pBadge.innerText = `基准校准 (${currentQIndex + 1}/${QUESTIONS.length})`;
+            pBadge.style.color = "#00f2ff";
+            pBadge.style.border = "1px solid #00f2ff";
+        } else {
+            pBadge.innerText = "🔥 施压探测阶段 🔥";
+            pBadge.style.color = "#ff3366";
+            pBadge.style.border = "1px solid #ff3366";
+            // 施压阶段清空之前的警报
+            resetAlerts();
+        }
+
+        // 倒计时条动画
+        tBar.style.transition = 'none';
+        tBar.style.width = '0%';
+        setTimeout(() => {
+            tBar.style.transition = `width ${q.time}s linear`;
+            tBar.style.width = '100%';
+        }, 50);
+
+        // 定时进入下一题
+        setTimeout(() => {
+            currentQIndex++;
+            nextQuestion();
+        }, q.time * 1000);
+    }
+
+    function endInterview() {
+        currentState = "finished";
+        qText.innerText = "测试结束\n请查看右上方标记的异常反应";
+        pBadge.innerText = "报告生成";
+        mainBtn.classList.remove('running');
+        mainBtn.innerText = "重新开始";
+    }
+
+    // 3. AI 分析每一帧 (The Brain)
+    function analyzeFrame(results) {
+        if (currentState !== "running") return;
+        const currentType = QUESTIONS[currentQIndex]?.type || "idle";
+
+        if (!results.faceLandmarks || !results.poseLandmarks) return;
+
+        // --- ZONE A: 头部扫描 ---
+        
+        // A1. 眨眼检测 (EAR 简化版: 比较上下眼睑距离)
+        const leftEyeTop = results.faceLandmarks[159];
+        const leftEyeBottom = results.faceLandmarks[145];
+        const eyeDist = Math.abs(leftEyeTop.y - leftEyeBottom.y);
+        
+        // 判定眨眼 (阈值需根据实际微调，这里用 0.02)
+        if (eyeDist < 0.02 && lastEyeAspect > 0.02) {
+            blinkCount++;
+            if (currentType === 'stress' && blinkCount > 3) { // 短时间内频繁眨眼
+                showAlert('blink');
+            }
+        }
+        lastEyeAspect = eyeDist;
+
+        // A2. 嘴唇消失 (抿嘴)
+        const lipTop = results.faceLandmarks[13];
+        const lipBottom = results.faceLandmarks[14];
+        const lipHeight = Math.abs(lipTop.y - lipBottom.y);
+        if (currentType === 'stress' && lipHeight < 0.01) {
+            showAlert('lip');
+        }
+
+        // --- ZONE B: 手部扫描 ---
+        
+        // B1. 抚摸后颈/锁骨
+        // 检查手部是否靠近脖子 (Pose 11/12 是肩膀, 9/10 是嘴, 取中间)
+        if (results.leftHandLandmarks || results.rightHandLandmarks) {
+            const hand = results.leftHandLandmarks || results.rightHandLandmarks;
+            const neckY = (results.poseLandmarks[11].y + results.poseLandmarks[12].y) / 2;
+            if (hand[0].y < neckY + 0.1 && hand[0].y > neckY - 0.1) { // 简单判定
+                if (currentType === 'stress') showAlert('touch');
+            }
+        }
+
+        // B2. 冻结反应 (计算速度)
+        if (results.rightHandLandmarks) {
+            const curr = results.rightHandLandmarks[0];
+            if (lastHandPos) {
+                const dist = Math.sqrt(Math.pow(curr.x - lastHandPos.x, 2) + Math.pow(curr.y - lastHandPos.y, 2));
+                // 如果在施压期，手几乎不动 (冻结)
+                if (currentType === 'stress' && dist < 0.001) {
+                    showAlert('freeze');
+                }
+            }
+            lastHandPos = curr;
+        }
+
+        // --- ZONE C: 躯干扫描 ---
+
+        // C1. 龟缩效应 (双肩耸起)
+        const shoulderLeft = results.poseLandmarks[11];
+        const shoulderRight = results.poseLandmarks[12];
+        const avgShoulderY = (shoulderLeft.y + shoulderRight.y) / 2;
+        
+        // 基准期记录肩膀高度
+        if (currentType === 'baseline') {
+            baselineStats.shoulderY = (baselineStats.shoulderY * frameCount + avgShoulderY) / (frameCount + 1);
+            frameCount++;
+        }
+        // 施压期对比：如果肩膀明显变高 (Y值变小)
+        if (currentType === 'stress') {
+            if (avgShoulderY < baselineStats.shoulderY - 0.02) {
+                showAlert('shrug');
+            }
+        }
+
+        // C2. 躯干逃离 (肩膀深度差)
+        const zDiff = Math.abs(shoulderLeft.z - shoulderRight.z);
+        if (currentType === 'stress' && zDiff > 0.2) { // 身体大幅侧转
+            showAlert('turn');
+        }
+    }
+
+    // 工具: 显示警报
+    function showAlert(type) {
+        alerts[type].style.display = "block";
+        // 2秒后自动消失
+        setTimeout(() => {
+            alerts[type].style.display = "none";
+        }, 2000);
+    }
+    
+    function resetAlerts() {
+        Object.values(alerts).forEach(el => el.style.display = 'none');
+    }
+
+    // --- MediaPipe 标准流程 (保持不变) ---
     const video = document.getElementById('src_video');
     const img = document.getElementById('src_img');
     const canvas = document.getElementById('output_canvas');
     const ctx = canvas.getContext('2d');
-    const statusText = document.getElementById('status');
-    const resultText = document.getElementById('result');
-    const dot = document.getElementById('dot');
-    
     const sideCtx = {
         face: document.getElementById('cv_face').getContext('2d'),
         pose: document.getElementById('cv_pose').getContext('2d'),
         hands: document.getElementById('cv_hands').getContext('2d')
     };
 
-    let cameraObj = null;
-    let isCameraMode = false;
-
-    // 2. 核心分析
     function onResults(results) {
-        statusText.innerText = "分析完成";
-        
-        // 动态调整画布尺寸
-        const width = isCameraMode ? video.videoWidth : img.naturalWidth;
-        const height = isCameraMode ? video.videoHeight : img.naturalHeight;
-        
-        if (width > 0 && height > 0) {
-            canvas.width = width;
-            canvas.height = height;
-            
-            ctx.save();
-            ctx.clearRect(0, 0, width, height);
-            
-            // 绘制背景
-            if (isCameraMode) {
-                ctx.drawImage(video, 0, 0, width, height);
-            } else {
-                ctx.drawImage(img, 0, 0, width, height);
-            }
-
-            // 绘制骨架 (更清晰的配色)
-            drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#00ffff22', lineWidth: 1});
-            drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffff00', lineWidth: 2});
-            drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ff', lineWidth: 2});
-            drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ff', lineWidth: 2});
+        const width = img.naturalWidth; const height = img.naturalHeight;
+        if (width && height) {
+            canvas.width = width; canvas.height = height;
+            ctx.save(); ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 绘制骨架
+            drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
+            drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffff00aa', lineWidth: 2});
+            drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ffaa', lineWidth: 2});
+            drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#ff00ffaa', lineWidth: 2});
             ctx.restore();
 
-            // 侧边栏
             drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#0ff');
             drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#ff0');
-            drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#f0f');
+            drawSide(sideCtx.hands, results.leftHandLandmarks, HAND_CONNECTIONS, '#f0f');
 
-            // 逻辑判断
-            analyze(results);
-        }
-    }
-
-    function analyze(results) {
-        if (results.faceLandmarks) {
-            const mouth = results.faceLandmarks[13];
-            let cover = false;
-            const check = (hand) => {
-                if(!hand) return false;
-                return Math.sqrt(Math.pow(mouth.x - hand[8].x, 2) + Math.pow(mouth.y - hand[8].y, 2)) < 0.15;
-            };
-            if(check(results.leftHandLandmarks) || check(results.rightHandLandmarks)) cover = true;
-
-            if(cover) {
-                resultText.innerText = "⚠️ 检测到遮挡 (掩饰)";
-                resultText.style.color = "#ff3366";
-            } else {
-                resultText.innerText = "状态正常";
-                resultText.style.color = "#fff";
-            }
-        } else {
-            resultText.innerText = "未检测到人脸";
-            resultText.style.color = "#aaa";
+            // *** 注入新的分析逻辑 ***
+            analyzeFrame(results);
         }
     }
 
     function drawSide(c, data, conn, color) {
-        c.canvas.width = 200; c.canvas.height = 200;
-        c.clearRect(0,0,200,200);
-        if(data) {
-            drawConnectors(c, data, conn, {color: color, lineWidth: 2});
-        }
+        c.canvas.width=200; c.canvas.height=200; c.clearRect(0,0,200,200);
+        if(data) drawConnectors(c, data, conn, {color: color, lineWidth: 2});
     }
 
-    // 3. 初始化 AI
     const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
     holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5});
     holistic.onResults(onResults);
 
-    // 4. 图片上传处理 (修复版)
+    // 交互绑定
+    mainBtn.onclick = () => {
+        if (currentState === "finished") {
+            window.location.reload(); // 简单重置
+        } else {
+            document.getElementById('file_input').click();
+        }
+    };
+
     document.getElementById('file_input').onchange = (e) => {
         const file = e.target.files[0];
         if(!file) return;
-        
-        isCameraMode = false;
-        if(cameraObj) cameraObj.stop(); // 停止相机
-
-        statusText.innerText = "正在处理图片...";
-        
+        
         const reader = new FileReader();
         reader.onload = (evt) => {
             img.src = evt.target.result;
-            // 等待图片解码完成
             img.onload = async () => {
-                await holistic.send({image: img});
+                // 启动测试流程
+                startInterview();
+                
+                // 模拟视频流：这里为了演示，我们在同一张图上循环运行分析
+                // (真实场景中这里应该是 Video 的每一帧)
+                // 我们用一个定时器每 100ms 重新发送这张图，模拟时间流逝，以便触发倒计时逻辑
+                const simulation = setInterval(async () => {
+                    if (currentState === "finished") clearInterval(simulation);
+                    await holistic.send({image: img});
+                }, 100);
             }
         };
         reader.readAsDataURL(file);
     };
-
-    // 5. 相机切换逻辑
-    window.toggleCamera = async function() {
-        isCameraMode = !isCameraMode;
-        if (isCameraMode) {
-            statusText.innerText = "启动相机中...";
-            if (!cameraObj) {
-                cameraObj = new Camera(video, {
-                    onFrame: async () => { await holistic.send({image: video}); },
-                    width: 640, height: 480
-                });
-            }
-            try {
-                await cameraObj.start();
-                statusText.innerText = "相机运行中";
-            } catch(e) {
-                alert("无法启动相机，请检查权限或使用HTTPS");
-                isCameraMode = false;
-            }
-        } else {
-            if(cameraObj) cameraObj.stop();
-            statusText.innerText = "已切换回图片模式";
-        }
-    }
 </script>
 </body>
 </html>
-
