@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V28</title>
+    <title>MindReader V29</title>
     <style>
-        /* --- 视觉系统 (V26 纯净暗黑版) --- */
+        /* --- 视觉系统 (V18/V24 高对比度暗黑风) --- */
         :root {
             --bg: #000000;
             --glass: rgba(20, 20, 20, 0.95);
@@ -28,7 +28,7 @@
         .hud {
             background: var(--glass); border-bottom: 1px solid var(--border);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px 20px 15px 20px; 
+            padding: 20px 20px 0 20px; /* 底部留空给进度条 */
             z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
         }
         .phase-badge {
@@ -39,19 +39,19 @@
             font-size: 18px; font-weight: 700; text-align: center; line-height: 1.4; max-width: 600px;
             color: #ffffff !important; 
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            margin-bottom: 15px; /* 给进度条留位置 */
+            margin-bottom: 15px; 
         }
         
-        /* 进度条 (物理结构) */
+        /* 进度条 (物理结构 - 强制可见) */
         .progress-track {
-            width: 100%; max-width: 300px; height: 6px; 
+            width: 100%; height: 4px; 
             background: rgba(255,255,255,0.1); 
-            border-radius: 3px; overflow: hidden;
+            margin-top: 10px;
         }
         .progress-fill {
             height: 100%; width: 0%; 
             background: var(--accent); 
-            box-shadow: 0 0 15px currentColor;
+            box-shadow: 0 0 10px currentColor;
             transition: width 0.1s linear; 
         }
 
@@ -131,39 +131,39 @@
 
 <div class="layer" id="layer_start">
     <div class="guide-box">
-        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V28</span></h1>
-        <p style="color:#888; font-size:13px; margin-bottom:30px">Deep Psychology Edition</p>
+        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V29</span></h1>
+        <p style="color:#888; font-size:13px; margin-bottom:30px">Unlocked Edition</p>
         
         <div class="guide-item">
             <div class="guide-emoji">🧠</div>
             <div>
                 <div style="color:#fff; font-weight:700">深度侧写</div>
-                <div>含真假惊讶、塔尖手势、轻蔑等10种判定</div>
+                <div>含真假惊讶、轻蔑、塔尖手势等 10+ 判定</div>
             </div>
         </div>
         <div class="guide-item">
             <div class="guide-emoji">🔄</div>
             <div>
                 <div style="color:#fff; font-weight:700">动态博弈</div>
-                <div>异常时自动触发陷阱追问</div>
+                <div>异常自动触发追问，完全随机题库</div>
             </div>
         </div>
         <div class="guide-item">
-            <div class="guide-emoji">⚠️</div>
+            <div class="guide-emoji">🚀</div>
             <div>
-                <div style="color:#fff; font-weight:700">网络检查</div>
-                <div>请确保 VPN 已开启，否则无法加载 AI 核心</div>
+                <div style="color:#fff; font-weight:700">急速启动</div>
+                <div>点击即刻进入，解决卡死问题</div>
             </div>
         </div>
 
-        <button class="btn-main" id="btn_start" onclick="safeStart()">启动分析</button>
+        <button class="btn-main" id="btn_start" onclick="unlockSystem()">立即启动</button>
     </div>
 </div>
 
 <div class="app">
     <div class="hud" id="hud_box">
         <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
-        <div class="q-text" id="hud_text">传感器校准中...</div>
+        <div class="q-text" id="hud_text">正在初始化神经连接...</div>
         <div class="progress-track">
             <div class="progress-fill" id="hud_bar"></div>
         </div>
@@ -191,16 +191,10 @@
     </div>
 </div>
 
-<video id="src_video" playsinline></video>
+<video id="src_video" playsinline webkit-playsinline autoplay muted style="display:none"></video>
 
 <script>
-    // --- 0. 全局错误捕获 (防卡死) ---
-    window.onerror = function(msg, url, line) {
-        alert("系统错误: " + msg + "\n请检查 VPN 连接或刷新页面。");
-        return false;
-    };
-
-    // --- 1. 题库 ---
+    // --- 题库 (洗牌) ---
     const RAW_POOL_BASE = ["请看着镜头，简单介绍一下你的爱好？", "你最喜欢的季节是什么？为什么？", "你平时周末一般几点起床？", "你养过宠物吗？"];
     const RAW_POOL_STRESS_1 = ["【高压】看着我。你最近是否对身边的人撒过谎？", "【高压】如果查你的手机相册，会有不想让人看的东西吗？"];
     const RAW_POOL_STRESS_2 = ["【两难】如果必须在事业和家庭中牺牲一个，你选哪个？", "【审讯】你是否曾经背叛过极其信任你的人？"];
@@ -223,7 +217,7 @@
     let currentQ = null;
     let evidence = { baseline: null, anomaly: null, maxScore: 0, frozenEyeBase: 0 };
     
-    // 扩展统计变量 (10种逻辑)
+    // 完整统计变量
     let stats = { 
         blinks: 0, blinkStorms: 0,
         baseEyeH: 0, baseLipH: 0,
@@ -232,57 +226,59 @@
         rubFrames: 0, steepFrames: 0,
         crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0,
         shockFrames: 0, shockDuration: 0,
-        frames: 0, lastEyeOpen: true, lastThumbPos: null, blinkBuffer: []
+        frames: 0, lastEyeOpen: true, lastThumbPos: null, lastBlinkTime: 0, blinkBuffer: []
     };
 
-    // --- 启动检查 ---
-    async function safeStart() {
-        const btn = document.getElementById('btn_start');
-        btn.innerText = "正在初始化...";
-        btn.disabled = true;
-
-        // 检查 AI 库是否加载
-        if (typeof Holistic === 'undefined') {
-            alert("错误：AI 核心库未加载！\n请检查您的 VPN 是否开启 (cdn.jsdelivr.net 被屏蔽)");
-            btn.innerText = "启动失败 (刷新重试)";
-            btn.disabled = false;
-            return;
-        }
-
-        // 初始化题库
+    // --- 强制解锁启动 ---
+    async function unlockSystem() {
+        // 1. 先隐藏UI，让用户感觉进去了
+        document.getElementById('layer_start').classList.add('hidden');
+        
+        // 2. 初始化题库
         POOL_BASE = shuffle([...RAW_POOL_BASE]);
         POOL_STRESS_1 = shuffle([...RAW_POOL_STRESS_1]);
         POOL_STRESS_2 = shuffle([...RAW_POOL_STRESS_2]);
         POOL_TRAP = shuffle([...RAW_POOL_TRAP]);
 
-        await startSystem();
-    }
-
-    async function startSystem() {
-        document.getElementById('layer_start').classList.add('hidden');
+        // 3. 异步启动摄像头和AI
         const video = document.getElementById('src_video');
         try {
+            // 兼容 iOS 的 constraints
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 640, height: 480, facingMode: "user" } 
+                video: { 
+                    width: { ideal: 640 }, 
+                    height: { ideal: 480 }, 
+                    facingMode: "user" 
+                } 
             });
             video.srcObject = stream;
+            // 确保视频播放
             await video.play();
 
-            const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
-            holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5, refineFaceLandmarks: true});
-            holistic.onResults(onResults);
-            
-            const camera = new Camera(video, {
-                onFrame: async () => { await holistic.send({image: video}); },
-                width: 640, height: 480
-            });
-            camera.start();
-            setTimeout(() => runStep(0), 2000);
+            if (typeof Holistic !== 'undefined') {
+                const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
+                holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5, refineFaceLandmarks: true});
+                holistic.onResults(onResults);
+                
+                const camera = new Camera(video, {
+                    onFrame: async () => { await holistic.send({image: video}); },
+                    width: 640, height: 480
+                });
+                camera.start();
+                
+                // 启动流程
+                setTimeout(() => runStep(0), 1000);
+            } else {
+                alert("错误：AI 组件未加载。请检查 VPN 连接。");
+                location.reload();
+            }
         } catch (e) { 
-            alert("摄像头启动失败：" + e.message); 
-            document.getElementById('layer_start').classList.remove('hidden');
+            alert("摄像头访问失败: " + e.message); 
+            location.reload();
         }
     }
+
+    function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
     // --- 流程控制 ---
     function runStep(stepIndex) {
@@ -347,7 +343,7 @@
         bar.style.transition = 'none'; 
         bar.style.width = '0%';
         bar.style.backgroundColor = color;
-        bar.style.boxShadow = `0 0 15px ${color}`;
+        bar.style.boxShadow = `0 0 10px ${color}`;
         
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -372,12 +368,14 @@
             if (stats.lipCompress > 10) score += 8;
             if (stats.contemptFrames > 10) score += 8;
             if (stats.rubFrames > 20) score += 10;
+            if (stats.steepFrames > 20) score -= 5;
             if (stats.ventralDenial > 10) score += 10;
             if (stats.freezeFrames > 20) score += 10;
+            if (stats.shrugFrames > 10) score += 5;
             
             if (stats.shockFrames > 0) {
-                if (stats.shockDuration > 30) score += 10; // 假
-                else score += 5; // 真
+                if (stats.shockDuration > 30) score += 10; 
+                else score += 5;
             }
         }
         sessionLog.push({ q: currentQ, stats: stats, cpm: cpm, score: score });
@@ -422,7 +420,7 @@
 
         let frameAnomaly = 0;
 
-        // 1. 眼睛逻辑
+        // 1. 眼睛
         if (currentQ) {
             const isClosed = leftEyeH < 0.012;
             if (isClosed && stats.lastEyeOpen) {
@@ -437,7 +435,7 @@
             stats.lastEyeOpen = !isClosed;
         }
 
-        // 2. 微表情
+        // 2. 微表情 (惊讶 & 抿嘴 & 轻蔑)
         if (currentQ && currentQ.type !== 'baseline' && evidence.frozenEyeBase > 0) {
             if (leftEyeH > evidence.frozenEyeBase * 1.4) {
                 stats.shockFrames++; 
@@ -456,22 +454,25 @@
             stats.contemptFrames++; frameAnomaly += 4;
         }
 
-        // 3. 手部逻辑
-        const checkHand = (hand) => {
+        // 3. 手部
+        const checkHand = (hand, isLeft) => {
             if (!hand) return;
             const idx = hand[8]; const thumb = hand[4]; const wrist = hand[0];
 
+            // 摸鼻
             if (Math.sqrt(Math.pow(idx.x - noseTip.x, 2) + Math.pow(idx.y - noseTip.y, 2)) < 0.05) {
                 stats.noseTouch++; frameAnomaly += 8;
                 ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 20, 0, 2*Math.PI);
                 ctx.strokeStyle = '#ff2a6d'; ctx.lineWidth = 3; ctx.stroke();
             }
+            // 摸脖子
             if (results.poseLandmarks) {
                 const neckY = (results.poseLandmarks[11].y + results.poseLandmarks[12].y) / 2;
                 if (Math.abs(wrist.y - neckY) < 0.1) {
                     stats.neckTouch++; frameAnomaly += 6;
                 }
             }
+            // 搓手
             if (Math.sqrt(Math.pow(thumb.x - idx.x, 2) + Math.pow(thumb.y - idx.y, 2)) < 0.04) {
                 if (stats.lastThumbPos) {
                     const move = Math.sqrt(Math.pow(thumb.x - stats.lastThumbPos.x, 2) + Math.pow(thumb.y - stats.lastThumbPos.y, 2));
@@ -480,8 +481,8 @@
                 stats.lastThumbPos = {x: thumb.x, y: thumb.y};
             }
         };
-        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks);
-        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks);
+        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks, true);
+        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks, false);
 
         // 塔尖手势
         if (results.leftHandLandmarks && results.rightHandLandmarks) {
@@ -565,7 +566,6 @@
                 if (d.stats.ventralDenial > 10) signals.push("腹侧否认");
                 if (d.stats.freezeFrames > 20) signals.push("冻结反应");
                 if (d.stats.shrugFrames > 10) signals.push("假耸肩");
-                
                 if (d.stats.shockFrames > 0) {
                     if (d.stats.shockDuration > 30) signals.push("假惊讶(表演)");
                     else signals.push("真惊讶");
