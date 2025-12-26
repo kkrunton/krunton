@@ -3,9 +3,629 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V25</title>
+    <title>MindReader V27</title>
     <style>
-        /* --- 视觉系统 (保持 V24 高对比度，未做修改) --- */
+        /* --- 视觉系统 (V26 稳定版) --- */
+        :root {
+            --bg: #000000;
+            --glass: rgba(20, 20, 20, 0.95);
+            --border: rgba(255, 255, 255, 0.2);
+            --accent: #00f2ff; 
+            --warn: #ffcc00;
+            --danger: #ff2a6d; 
+            --text: #ffffff;
+        }
+
+        body {
+            background: var(--bg); color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", monospace;
+            margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .app { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
+
+        /* HUD */
+        .hud {
+            /* 物理占位，防止遮挡 */
+            background: var(--glass); border-bottom: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px 20px 15px 20px; 
+            z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
+        }
+        .phase-badge {
+            font-size: 11px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
+            border-radius: 4px; margin-bottom: 10px; text-transform: uppercase; border: 1px solid currentColor;
+        }
+        .q-text { 
+            font-size: 18px; font-weight: 700; text-align: center; line-height: 1.4; max-width: 600px;
+            color: #ffffff !important; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 15px; 
+        }
+        
+        /* 进度条 (物理镶嵌) */
+        .progress-track {
+            width: 100%; max-width: 300px; height: 6px; 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 3px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; width: 0%; 
+            background: var(--accent); 
+            box-shadow: 0 0 15px currentColor;
+            transition: width 0.1s linear; 
+        }
+
+        /* 监控区 */
+        .viewport {
+            flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+        #main_canvas {
+            width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1);
+        }
+
+        /* 弹窗已物理删除 */
+
+        /* 底部仪表盘 */
+        .dashboard {
+            height: 120px; background: var(--glass); border-top: 1px solid var(--border);
+            display: flex; gap: 10px; padding: 15px; flex-shrink: 0; overflow-x: auto;
+            backdrop-filter: blur(20px); padding-bottom: calc(15px + env(safe-area-inset-bottom));
+        }
+        .dash-card {
+            flex: 1; min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            border-radius: 8px; position: relative; overflow: hidden;
+        }
+        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
+        .mini-canvas { width: 100%; height: 100%; opacity: 0.8; }
+
+        /* 启动/报告层 */
+        .layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 200; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: opacity 0.3s; padding: 30px; box-sizing: border-box;
+        }
+        .layer.hidden { opacity: 0; pointer-events: none; }
+
+        .guide-box {
+            background: #111; border: 1px solid #333; border-radius: 20px; padding: 30px;
+            max-width: 400px; width: 100%; text-align: center;
+        }
+        .guide-item {
+            display: flex; align-items: center; text-align: left; margin: 15px 0; font-size: 13px; color: #ccc;
+            background: #222; padding: 15px; border-radius: 10px; border: 1px solid #333;
+        }
+        .guide-emoji { font-size: 24px; margin-right: 15px; width: 30px; text-align: center; }
+
+        .btn-main {
+            margin-top: 25px; width: 100%; padding: 18px 0; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, var(--accent), #0044ff); color: #ffffff !important;
+            font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 242, 255, 0.3);
+        }
+
+        /* 报告页 */
+        .report-box { width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; background: #050505; }
+        .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
+        .photo-card { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
+        .photo-img { width: 100%; height: auto; display: block; border-bottom: 1px solid #333; }
+        .photo-meta { padding: 10px; font-size: 10px; text-align: center; color: #aaa; text-transform: uppercase; font-weight: 700; }
+        
+        .log-item {
+            background: #111; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #333;
+        }
+        .log-item.stress { border-left: 4px solid var(--danger); }
+        .log-item.trap { border-left: 4px solid var(--warn); }
+        .log-item.baseline { border-left: 4px solid var(--accent); }
+
+        .log-title { font-size: 10px; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; }
+        .log-item.baseline .log-title { color: var(--accent); }
+        .log-item.stress .log-title { color: var(--warn); } 
+        .log-item.trap .log-title { color: var(--danger); }
+
+        #src_video { display: none; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="layer" id="layer_start">
+    <div class="guide-box">
+        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V27</span></h1>
+        <p style="color:#888; font-size:13px; margin-bottom:30px">Deep Psychology Edition</p>
+        
+        <div class="guide-item">
+            <div class="guide-emoji">🧠</div>
+            <div>
+                <div style="color:#fff; font-weight:700">深度侧写</div>
+                <div>含轻蔑、真假惊讶、塔尖手势等 10+ 种判定</div>
+            </div>
+        </div>
+        <div class="guide-item">
+            <div class="guide-emoji">🔄</div>
+            <div>
+                <div style="color:#fff; font-weight:700">动态博弈</div>
+                <div>如果检测到异常，系统将自动发起追问</div>
+            </div>
+        </div>
+        <div class="guide-item">
+            <div class="guide-emoji">📐</div>
+            <div>
+                <div style="color:#fff; font-weight:700">摆放建议</div>
+                <div>请将手机放远 (50cm+)，确保上半身入镜</div>
+            </div>
+        </div>
+
+        <button class="btn-main" onclick="startSystem()">启动分析</button>
+    </div>
+</div>
+
+<div class="app">
+    <div class="hud" id="hud_box">
+        <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
+        <div class="q-text" id="hud_text">传感器校准中...</div>
+        <div class="progress-track">
+            <div class="progress-fill" id="hud_bar"></div>
+        </div>
+    </div>
+
+    <div class="viewport">
+        <canvas id="main_canvas"></canvas>
+    </div>
+
+    <div class="dashboard">
+        <div class="dash-card"><div class="dash-label">FACE MESH</div><canvas id="cv_face" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><div class="dash-label">SKELETON</div><canvas id="cv_pose" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><div class="dash-label">HANDS</div><canvas id="cv_hands" class="mini-canvas"></canvas></div>
+    </div>
+</div>
+
+<div class="layer hidden" id="layer_report">
+    <div class="report-box">
+        <h2 style="text-align:center; color:#fff; margin-bottom:30px">最终心理档案</h2>
+        
+        <div style="font-size:11px; color:#888; font-weight:bold; letter-spacing:1px">关键证据快照 (EVIDENCE)</div>
+        <div class="evidence-row" id="evidence_area"></div>
+
+        <div style="font-size:11px; color:#888; font-weight:bold; letter-spacing:1px; margin-top:20px">动态分析流水 (LOG)</div>
+        <div id="log_area" style="margin-top:10px"></div>
+
+        <button class="btn-main" style="width:100%; background:#222; margin-top:30px; border:1px solid #444" onclick="location.reload()">归档并重置</button>
+    </div>
+</div>
+
+<video id="src_video" playsinline></video>
+
+<script>
+    // --- 题库 (洗牌) ---
+    const RAW_POOL_BASE = ["请看着镜头，简单介绍一下你的爱好？", "你最喜欢的季节是什么？为什么？", "你平时周末一般几点起床？", "你养过宠物吗？"];
+    const RAW_POOL_STRESS_1 = ["【高压】看着我。你最近是否对身边的人撒过谎？", "【高压】如果查你的手机相册，会有不想让人看的东西吗？"];
+    const RAW_POOL_STRESS_2 = ["【两难】如果必须在事业和家庭中牺牲一个，你选哪个？", "【审讯】你是否曾经背叛过极其信任你的人？"];
+    const RAW_POOL_TRAP = ["【追问】你在撒谎吗？为什么你刚才的眼神在躲避？", "【追问】你的身体动作出卖了你，你在紧张什么？"];
+
+    let POOL_BASE = [], POOL_STRESS_1 = [], POOL_STRESS_2 = [], POOL_TRAP = [];
+
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex != 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    let sessionLog = [];
+    let currentStep = 0; 
+    let currentQ = null;
+    let evidence = { baseline: null, anomaly: null, maxScore: 0, frozenEyeBase: 0 };
+    
+    // --- 扩展统计变量 (支持所有 10 种逻辑) ---
+    let stats = { 
+        blinks: 0, blinkStorms: 0, // 眨眼风暴
+        baseEyeH: 0, baseLipH: 0, 
+        
+        noseTouch: 0, chinTouch: 0, neckTouch: 0,
+        lipCompress: 0, 
+        contemptFrames: 0, // 轻蔑
+        
+        rubFrames: 0, steepFrames: 0, // 搓手，塔尖
+        
+        crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0, // 姿态
+        shockFrames: 0, shockDuration: 0, // 真假惊讶
+        
+        frames: 0, lastEyeOpen: true, lastThumbPos: null, lastBlinkTime: 0, blinkBuffer: []
+    };
+
+    async function startSystem() {
+        POOL_BASE = shuffle([...RAW_POOL_BASE]);
+        POOL_STRESS_1 = shuffle([...RAW_POOL_STRESS_1]);
+        POOL_STRESS_2 = shuffle([...RAW_POOL_STRESS_2]);
+        POOL_TRAP = shuffle([...RAW_POOL_TRAP]);
+
+        document.getElementById('layer_start').classList.add('hidden');
+        const video = document.getElementById('src_video');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480, facingMode: "user" } 
+            });
+            video.srcObject = stream;
+            await video.play();
+
+            const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
+            holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5, refineFaceLandmarks: true});
+            holistic.onResults(onResults);
+            
+            const camera = new Camera(video, {
+                onFrame: async () => { await holistic.send({image: video}); },
+                width: 640, height: 480
+            });
+            camera.start();
+            setTimeout(() => runStep(0), 2000);
+        } catch (e) { alert("摄像头启动失败：" + e.message); }
+    }
+
+    // --- 流程控制 ---
+    function runStep(stepIndex) {
+        currentStep = stepIndex;
+        // 继承基准
+        const oldEyeBase = stats.baseEyeH;
+        const oldLipBase = stats.baseLipH;
+        
+        stats = { 
+            blinks: 0, blinkStorms: 0,
+            baseEyeH: oldEyeBase, baseLipH: oldLipBase,
+            noseTouch: 0, chinTouch: 0, neckTouch: 0,
+            lipCompress: 0, contemptFrames: 0,
+            rubFrames: 0, steepFrames: 0,
+            crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0,
+            shockFrames: 0, shockDuration: 0,
+            frames: 0, lastEyeOpen: true, lastThumbPos: null, lastBlinkTime: 0, blinkBuffer: []
+        };
+
+        if (stepIndex === 0) {
+            currentQ = { type: 'baseline', time: 8, text: POOL_BASE[0], id: 1 };
+        } else if (stepIndex === 1) {
+            currentQ = { type: 'baseline', time: 8, text: "好的。" + POOL_BASE[1], id: 2 };
+        } else if (stepIndex === 2) {
+            if (!evidence.baseline) captureEvidence('baseline');
+            evidence.frozenEyeBase = stats.baseEyeH;
+            currentQ = { type: 'stress', time: 10, text: POOL_STRESS_1[0], id: 3 };
+        } else if (stepIndex === 3) {
+            const prevLog = sessionLog[2];
+            if (prevLog && prevLog.score > 20) {
+                currentQ = { type: 'trap', time: 10, text: POOL_TRAP[0], id: 4 };
+            } else {
+                currentQ = { type: 'stress', time: 10, text: POOL_STRESS_2[0], id: 4 };
+            }
+        } else if (stepIndex === 4) {
+            const prevLog = sessionLog[3];
+            if (prevLog.q.type === 'stress' && prevLog.score > 20) {
+                currentQ = { type: 'trap', time: 10, text: "【最终追问】你的生理反应非常剧烈。请给出一个合理的解释。", id: 5 };
+            } else {
+                generateReport(); return;
+            }
+        } else {
+            generateReport(); return;
+        }
+
+        updateHUD();
+        setTimeout(() => { finishQuestion(); runStep(stepIndex + 1); }, currentQ.time * 1000);
+    }
+
+    function updateHUD() {
+        const badge = document.getElementById('hud_badge');
+        let color = 'var(--accent)';
+        if (currentQ.type === 'stress') color = 'var(--warn)';
+        if (currentQ.type === 'trap') color = 'var(--danger)';
+
+        badge.innerText = `${currentQ.type.toUpperCase()} PHASE`;
+        badge.style.color = color;
+        badge.style.borderColor = color;
+        document.getElementById('hud_text').innerText = currentQ.text;
+        
+        const bar = document.getElementById('hud_bar');
+        bar.style.transition = 'none'; 
+        bar.style.width = '0%';
+        bar.style.backgroundColor = color;
+        bar.style.boxShadow = `0 0 15px ${color}`;
+        
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                bar.style.transition = `width ${currentQ.time}s linear`; 
+                bar.style.width = '100%'; 
+            });
+        });
+    }
+
+    function finishQuestion() {
+        const cpm = Math.round(stats.blinks / (currentQ.time / 60));
+        let score = 0;
+        
+        if (currentQ.type !== 'baseline') {
+            const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
+            const baseCPM = baseLogs.length ? baseLogs[0].cpm : 20;
+            
+            // 评分逻辑包含所有新特征
+            if (cpm > baseCPM * 1.4) score += 10;
+            if (stats.blinkStorms > 0) score += 15; // 眨眼风暴
+            
+            if (stats.noseTouch > 5) score += 10;
+            if (stats.neckTouch > 5) score += 10;
+            if (stats.lipCompress > 10) score += 8;
+            if (stats.contemptFrames > 10) score += 8; // 轻蔑
+            
+            if (stats.rubFrames > 20) score += 10;
+            if (stats.steepFrames > 20) score -= 5; // 塔尖手势减分(自信)
+            
+            if (stats.ventralDenial > 10) score += 10; // 腹侧否认
+            if (stats.freezeFrames > 20) score += 10; // 冻结
+            if (stats.shrugFrames > 10) score += 5;   // 假耸肩
+            
+            // 真假惊讶判定
+            if (stats.shockFrames > 0) {
+                if (stats.shockDuration > 30) score += 10; // 假惊讶 (>1s)
+                else score += 5; // 真惊讶
+            }
+        }
+        sessionLog.push({ q: currentQ, stats: stats, cpm: cpm, score: score });
+    }
+
+    function captureEvidence(type) {
+        const canvas = document.getElementById('main_canvas');
+        if(canvas.width > 0) evidence[type] = canvas.toDataURL('image/jpeg', 0.8);
+    }
+
+    // --- AI 核心分析 (V27 Deep Logic) ---
+    const canvas = document.getElementById('main_canvas');
+    const ctx = canvas.getContext('2d');
+    const sideCtx = {
+        face: document.getElementById('cv_face').getContext('2d'),
+        pose: document.getElementById('cv_pose').getContext('2d'),
+        hands: document.getElementById('cv_hands').getContext('2d')
+    };
+
+    function onResults(results) {
+        const video = document.getElementById('src_video');
+        const vW = video.videoWidth; const vH = video.videoHeight;
+        
+        if (vW && vH) {
+            if (canvas.width !== vW || canvas.height !== vH) { canvas.width = vW; canvas.height = vH; }
+            ctx.save(); ctx.clearRect(0, 0, vW, vH); ctx.drawImage(video, 0, 0, vW, vH);
+        } else { return; }
+
+        if (!results.faceLandmarks) { ctx.restore(); return; }
+
+        const face = results.faceLandmarks;
+        const noseTip = face[1]; 
+        const leftEyeH = Math.abs(face[159].y - face[145].y);
+        const lipH = Math.abs(face[13].y - face[14].y);
+
+        // 基准
+        if (currentQ && currentQ.type === 'baseline') {
+            stats.baseEyeH = (stats.baseEyeH * stats.frames + leftEyeH) / (stats.frames + 1);
+            stats.baseLipH = (stats.baseLipH * stats.frames + lipH) / (stats.frames + 1);
+        }
+
+        drawConnectors(ctx, face, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
+
+        let frameAnomaly = 0;
+
+        // --- 1. 眼睛逻辑 ---
+        if (currentQ) {
+            const isClosed = leftEyeH < 0.012;
+            
+            // 眨眼检测
+            if (isClosed && stats.lastEyeOpen) {
+                stats.blinks++;
+                const now = Date.now();
+                // 眨眼风暴 (500ms 内 > 3次)
+                stats.blinkBuffer.push(now);
+                stats.blinkBuffer = stats.blinkBuffer.filter(t => now - t < 500);
+                if (stats.blinkBuffer.length > 3) {
+                    stats.blinkStorms++; frameAnomaly += 8;
+                }
+            }
+            // 视线阻断 (>1s)
+            if (isClosed) {
+                if(!stats.closeStart) stats.closeStart = Date.now();
+                if(Date.now() - stats.closeStart > 1000) frameAnomaly += 5;
+            } else { stats.closeStart = null; }
+            
+            stats.lastEyeOpen = !isClosed;
+        }
+
+        // --- 2. 微表情 ---
+        // 惊讶 (对比锁定基准)
+        if (currentQ && currentQ.type !== 'baseline' && evidence.frozenEyeBase > 0) {
+            if (leftEyeH > evidence.frozenEyeBase * 1.4) {
+                stats.shockFrames++; 
+                stats.shockDuration++; // 累计时长
+                frameAnomaly += 5;
+            } else {
+                stats.shockDuration = 0; // 重置
+            }
+        }
+        
+        // 抿嘴
+        if (currentQ.type !== 'baseline' && stats.baseLipH > 0 && lipH < stats.baseLipH * 0.6) {
+            stats.lipCompress++; frameAnomaly += 3;
+        }
+
+        // 轻蔑 (Contempt) - 嘴角不对称
+        const leftMouthY = face[61].y;
+        const rightMouthY = face[291].y;
+        if (Math.abs(leftMouthY - rightMouthY) > 0.02) { // 阈值需调试
+            stats.contemptFrames++; frameAnomaly += 4;
+        }
+
+        // --- 3. 手部逻辑 ---
+        const checkHand = (hand, isLeft) => {
+            if (!hand) return;
+            const idx = hand[8]; const thumb = hand[4]; const wrist = hand[0];
+
+            // 摸鼻
+            if (Math.sqrt(Math.pow(idx.x - noseTip.x, 2) + Math.pow(idx.y - noseTip.y, 2)) < 0.05) {
+                stats.noseTouch++; frameAnomaly += 8;
+                ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 20, 0, 2*Math.PI);
+                ctx.strokeStyle = '#ff2a6d'; ctx.lineWidth = 3; ctx.stroke();
+            }
+            // 摸脖子
+            if (results.poseLandmarks) {
+                const neckY = (results.poseLandmarks[11].y + results.poseLandmarks[12].y) / 2;
+                if (Math.abs(wrist.y - neckY) < 0.1) {
+                    stats.neckTouch++; frameAnomaly += 6;
+                }
+            }
+            // 搓手 (焦虑)
+            if (Math.sqrt(Math.pow(thumb.x - idx.x, 2) + Math.pow(thumb.y - idx.y, 2)) < 0.04) {
+                if (stats.lastThumbPos) {
+                    const move = Math.sqrt(Math.pow(thumb.x - stats.lastThumbPos.x, 2) + Math.pow(thumb.y - stats.lastThumbPos.y, 2));
+                    if (move > 0.003) { stats.rubFrames++; frameAnomaly += 3; }
+                }
+                stats.lastThumbPos = {x: thumb.x, y: thumb.y};
+            }
+        };
+        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks, true);
+        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks, false);
+
+        // 塔尖手势 (Steepling) - 自信
+        if (results.leftHandLandmarks && results.rightHandLandmarks) {
+            const lIdx = results.leftHandLandmarks[8];
+            const rIdx = results.rightHandLandmarks[8];
+            const lWrist = results.leftHandLandmarks[0];
+            const rWrist = results.rightHandLandmarks[0];
+            
+            // 指尖近，手腕远
+            const tipDist = Math.sqrt(Math.pow(lIdx.x - rIdx.x, 2) + Math.pow(lIdx.y - rIdx.y, 2));
+            const wristDist = Math.sqrt(Math.pow(lWrist.x - rWrist.x, 2) + Math.pow(lWrist.y - rWrist.y, 2));
+            
+            if (tipDist < 0.05 && wristDist > 0.15) {
+                stats.steepFrames++; // 这是一个减分项(代表自信)
+            }
+        }
+
+        // --- 4. 躯干/本能反应 ---
+        if (results.poseLandmarks) {
+            const pose = results.poseLandmarks;
+            const lShldr = pose[11]; const rShldr = pose[12];
+            const lEar = pose[7]; const rEar = pose[8];
+
+            // 腹侧否认 (Ventral Denial) - Z轴差异
+            if (Math.abs(lShldr.z - rShldr.z) > 0.3) {
+                stats.ventralDenial++; frameAnomaly += 5;
+            }
+
+            // 冻结/乌龟效应 (Turtle Effect) - 耸肩缩脖
+            const shoulderEarDist = (Math.abs(lShldr.y - lEar.y) + Math.abs(rShldr.y - rEar.y)) / 2;
+            // 简单逻辑：如果距离显著小于平时的基准 (这里简化为阈值)
+            if (shoulderEarDist < 0.15) { 
+                stats.freezeFrames++; frameAnomaly += 5;
+            }
+
+            // 假耸肩 (Asymmetric Shrug) - 高度不一
+            if (Math.abs(lShldr.y - rShldr.y) > 0.05) {
+                stats.shrugFrames++; frameAnomaly += 4;
+            }
+            
+            // 抱胸
+            const lWrist = pose[15]; const rWrist = pose[16];
+            if (lWrist.y > lShldr.y && Math.abs(lWrist.x - rWrist.x) < 0.2) {
+                stats.crossFrames++; frameAnomaly += 4;
+            }
+        }
+
+        // 智能抓拍
+        if (currentQ && (currentQ.type === 'stress' || currentQ.type === 'trap')) {
+            if (frameAnomaly > evidence.maxScore) {
+                evidence.maxScore = frameAnomaly;
+                captureEvidence('anomaly');
+            }
+        }
+
+        ctx.restore();
+        drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#00f2ff');
+        drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#fff');
+        drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#ff2a6d');
+
+        if(currentQ) stats.frames++;
+    }
+
+    function drawSide(c, data, conn, color) {
+        c.canvas.width=150; c.canvas.height=150; c.clearRect(0,0,150,150);
+        if(data) { c.save(); drawConnectors(c, data, conn, {color: color, lineWidth: 2}); c.restore(); }
+    }
+
+    function generateReport() {
+        document.getElementById('layer_report').classList.remove('hidden');
+        const evArea = document.getElementById('evidence_area');
+        const imgBase = evidence.baseline || "";
+        const imgAnom = evidence.anomaly || imgBase;
+        evArea.innerHTML = `
+            <div class="photo-card">
+                <img src="${imgBase}" class="photo-img">
+                <div class="photo-meta" style="color:var(--accent)">基准状态 (BASELINE)</div>
+            </div>
+            <div class="photo-card" style="border-color:var(--danger)">
+                <img src="${imgAnom}" class="photo-img">
+                <div class="photo-meta" style="color:var(--danger)">压力反应 (REACTION)</div>
+            </div>
+        `;
+
+        const logArea = document.getElementById('log_area');
+        let html = "";
+        
+        sessionLog.forEach(d => {
+            let signals = [];
+            if (d.q.type !== 'baseline') {
+                const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
+                const baseCPM = baseLogs.length ? baseLogs[0].cpm : 20;
+                
+                if (d.cpm > baseCPM * 1.4) signals.push(`眨眼激增(${d.cpm})`);
+                if (d.stats.blinkStorms > 0) signals.push("眨眼风暴");
+                
+                if (d.stats.lipCompress > 15) signals.push("抿嘴掩饰");
+                if (d.stats.contemptFrames > 10) signals.push("轻蔑表情");
+                
+                if (d.stats.noseTouch > 5) signals.push("触碰鼻尖(掩饰)");
+                if (d.stats.neckTouch > 5) signals.push("触碰颈部(不安)");
+                if (d.stats.rubFrames > 20) signals.push("焦虑搓手");
+                if (d.stats.steepFrames > 10) signals.push("塔尖手势(自信)"); // 特殊
+                
+                if (d.stats.ventralDenial > 10) signals.push("腹侧否认(逃离)");
+                if (d.stats.freezeFrames > 20) signals.push("冻结反应");
+                if (d.stats.shrugFrames > 10) signals.push("假耸肩");
+                
+                if (d.stats.shockFrames > 0) {
+                    if (d.stats.shockDuration > 30) signals.push("假惊讶(表演)");
+                    else signals.push("真惊讶");
+                }
+            }
+            const isRisk = signals.length > 0;
+            html += `
+                <div class="log-item ${d.q.type}">
+                    <div class="log-title">${d.q.type} PHASE</div>
+                    <div style="font-size:16px; color:#fff; font-weight:700; margin-bottom:8px">"${d.q.text}"</div>
+                    ${isRisk ? `<div style="color:#ff8a84; font-size:12px; font-weight:bold">⚠ ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#aaa">反应平稳</div>'}
+                </div>
+            `;
+        });
+        logArea.innerHTML = html;
+    }
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MindReader V27</title>
+    <style>
+        /* --- 视觉系统 (V26 稳定版) --- */
         :root {
             --bg: #000000;
             --glass: rgba(20, 20, 20, 0.95);
@@ -26,9 +646,11 @@
 
         /* HUD */
         .hud {
-            min-height: 120px; background: var(--glass); border-bottom: 1px solid var(--border);
+            /* 物理占位，防止遮挡 */
+            background: var(--glass); border-bottom: 1px solid var(--border);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 15px 20px; z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
+            padding: 20px 20px 15px 20px; 
+            z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
         }
         .phase-badge {
             font-size: 11px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
@@ -38,14 +660,20 @@
             font-size: 18px; font-weight: 700; text-align: center; line-height: 1.4; max-width: 600px;
             color: #ffffff !important; 
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 15px; 
         }
         
-        /* 进度条修复：确保绝对定位且层级最高 */
-        .progress-bar { 
-            position: absolute; bottom: 0; left: 0; width: 0%; height: 4px; 
+        /* 进度条 (物理镶嵌) */
+        .progress-track {
+            width: 100%; max-width: 300px; height: 6px; 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 3px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; width: 0%; 
             background: var(--accent); 
-            z-index: 999; /* 强制置顶 */
-            box-shadow: 0 0 15px currentColor; /* 增加发光防止看不清 */
+            box-shadow: 0 0 15px currentColor;
+            transition: width 0.1s linear; 
         }
 
         /* 监控区 */
@@ -56,19 +684,7 @@
             width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1);
         }
 
-        /* 实时标签 */
-        .detect-tags {
-            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 60;
-        }
-        .tag {
-            background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 4px; font-size: 11px;
-            font-weight: 600; border-left: 3px solid; opacity: 0; transform: translateX(20px); transition: all 0.3s ease;
-            color: #fff;
-        }
-        .tag.active { opacity: 1; transform: translateX(0); }
-        .tag.danger { border-color: var(--danger); color: var(--danger); }
-        .tag.warn { border-color: var(--warn); color: var(--warn); }
-        .tag.info { border-color: var(--accent); color: var(--accent); }
+        /* 弹窗已物理删除 */
 
         /* 底部仪表盘 */
         .dashboard {
@@ -121,11 +737,10 @@
         .log-item.trap { border-left: 4px solid var(--warn); }
         .log-item.baseline { border-left: 4px solid var(--accent); }
 
-        /* 修复报告里的文字颜色 */
         .log-title { font-size: 10px; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; }
         .log-item.baseline .log-title { color: var(--accent); }
-        .log-item.stress .log-title { color: var(--danger); } /* V24 修正：Stress 用红色/黄色区分 */
-        .log-item.trap .log-title { color: var(--warn); }
+        .log-item.stress .log-title { color: var(--warn); } 
+        .log-item.trap .log-title { color: var(--danger); }
 
         #src_video { display: none; }
     </style>
@@ -139,32 +754,32 @@
 
 <div class="layer" id="layer_start">
     <div class="guide-box">
-        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V25</span></h1>
-        <p style="color:#888; font-size:13px; margin-bottom:30px">BugFix Edition</p>
+        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V27</span></h1>
+        <p style="color:#888; font-size:13px; margin-bottom:30px">Deep Psychology Edition</p>
         
         <div class="guide-item">
             <div class="guide-emoji">🧠</div>
             <div>
-                <div style="color:#fff; font-weight:700">动态博弈</div>
-                <div>系统根据你的潜意识反应自动调整话术</div>
+                <div style="color:#fff; font-weight:700">深度侧写</div>
+                <div>含轻蔑、真假惊讶、塔尖手势等 10+ 种判定</div>
             </div>
         </div>
         <div class="guide-item">
-            <div class="guide-emoji">📷</div>
+            <div class="guide-emoji">🔄</div>
             <div>
-                <div style="color:#fff; font-weight:700">微表情捕捉</div>
-                <div>含摸鼻、抿嘴、焦虑摩挲等 8 种判定</div>
+                <div style="color:#fff; font-weight:700">动态博弈</div>
+                <div>如果检测到异常，系统将自动发起追问</div>
             </div>
         </div>
         <div class="guide-item">
-            <div class="guide-emoji">📏</div>
+            <div class="guide-emoji">📐</div>
             <div>
                 <div style="color:#fff; font-weight:700">摆放建议</div>
-                <div>请将手机放远 (50cm+)，确保手部入镜</div>
+                <div>请将手机放远 (50cm+)，确保上半身入镜</div>
             </div>
         </div>
 
-        <button class="btn-main" onclick="startSystem()">启动分析系统</button>
+        <button class="btn-main" onclick="startSystem()">启动分析</button>
     </div>
 </div>
 
@@ -172,18 +787,12 @@
     <div class="hud" id="hud_box">
         <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
         <div class="q-text" id="hud_text">传感器校准中...</div>
-        <div class="progress-bar" id="hud_bar"></div>
+        <div class="progress-track">
+            <div class="progress-fill" id="hud_bar"></div>
+        </div>
     </div>
 
     <div class="viewport">
-        <div class="detect-tags">
-            <div class="tag danger" id="tag_lip">🤐 抿嘴掩饰 (Lip Compress)</div>
-            <div class="tag danger" id="tag_nose">🤥 触碰鼻尖 (Deception)</div>
-            <div class="tag warn" id="tag_neck">😰 触碰颈部 (Insecurity)</div>
-            <div class="tag warn" id="tag_rub">🤏 焦虑摩挲 (Fidgeting)</div>
-            <div class="tag info" id="tag_shock">😲 惊讶瞪眼 (Shock)</div>
-            <div class="tag warn" id="tag_cross">🙅‍♂️ 防御姿态 (Crossed)</div>
-        </div>
         <canvas id="main_canvas"></canvas>
     </div>
 
@@ -211,20 +820,14 @@
 <video id="src_video" playsinline></video>
 
 <script>
-    // --- 修复点 1：题库与洗牌逻辑 ---
-    // 原始题库池
+    // --- 题库 (洗牌) ---
     const RAW_POOL_BASE = ["请看着镜头，简单介绍一下你的爱好？", "你最喜欢的季节是什么？为什么？", "你平时周末一般几点起床？", "你养过宠物吗？"];
     const RAW_POOL_STRESS_1 = ["【高压】看着我。你最近是否对身边的人撒过谎？", "【高压】如果查你的手机相册，会有不想让人看的东西吗？"];
     const RAW_POOL_STRESS_2 = ["【两难】如果必须在事业和家庭中牺牲一个，你选哪个？", "【审讯】你是否曾经背叛过极其信任你的人？"];
-    const RAW_POOL_TRAP = ["【追问】你在撒谎吗？为什么你刚才的眼神在躲避？", "【追问】你的手部动作出卖了你，你在紧张什么？"];
+    const RAW_POOL_TRAP = ["【追问】你在撒谎吗？为什么你刚才的眼神在躲避？", "【追问】你的身体动作出卖了你，你在紧张什么？"];
 
-    // 运行时题库（将被洗牌）
-    let POOL_BASE = [];
-    let POOL_STRESS_1 = [];
-    let POOL_STRESS_2 = [];
-    let POOL_TRAP = [];
+    let POOL_BASE = [], POOL_STRESS_1 = [], POOL_STRESS_2 = [], POOL_TRAP = [];
 
-    // 简单的洗牌函数 (Fisher-Yates)
     function shuffle(array) {
         let currentIndex = array.length, randomIndex;
         while (currentIndex != 0) {
@@ -240,15 +843,24 @@
     let currentQ = null;
     let evidence = { baseline: null, anomaly: null, maxScore: 0, frozenEyeBase: 0 };
     
+    // --- 扩展统计变量 (支持所有 10 种逻辑) ---
     let stats = { 
-        blinks: 0, baseEyeH: 0, baseLipH: 0, 
+        blinks: 0, blinkStorms: 0, // 眨眼风暴
+        baseEyeH: 0, baseLipH: 0, 
+        
         noseTouch: 0, chinTouch: 0, neckTouch: 0,
-        lipCompress: 0, rubFrames: 0, crossFrames: 0, shockFrames: 0,
-        frames: 0, lastEyeOpen: true, lastThumbPos: null
+        lipCompress: 0, 
+        contemptFrames: 0, // 轻蔑
+        
+        rubFrames: 0, steepFrames: 0, // 搓手，塔尖
+        
+        crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0, // 姿态
+        shockFrames: 0, shockDuration: 0, // 真假惊讶
+        
+        frames: 0, lastEyeOpen: true, lastThumbPos: null, lastBlinkTime: 0, blinkBuffer: []
     };
 
     async function startSystem() {
-        // --- 初始化时洗牌题库，防止重复 ---
         POOL_BASE = shuffle([...RAW_POOL_BASE]);
         POOL_STRESS_1 = shuffle([...RAW_POOL_STRESS_1]);
         POOL_STRESS_2 = shuffle([...RAW_POOL_STRESS_2]);
@@ -279,16 +891,21 @@
     // --- 流程控制 ---
     function runStep(stepIndex) {
         currentStep = stepIndex;
+        // 继承基准
         const oldEyeBase = stats.baseEyeH;
         const oldLipBase = stats.baseLipH;
         
         stats = { 
-            blinks: 0, noseTouch: 0, chinTouch: 0, neckTouch: 0, lipCompress: 0, 
-            rubFrames: 0, crossFrames: 0, shockFrames: 0, frames: 0, 
-            lastEyeOpen: true, lastThumbPos: null, baseEyeH: oldEyeBase, baseLipH: oldLipBase 
+            blinks: 0, blinkStorms: 0,
+            baseEyeH: oldEyeBase, baseLipH: oldLipBase,
+            noseTouch: 0, chinTouch: 0, neckTouch: 0,
+            lipCompress: 0, contemptFrames: 0,
+            rubFrames: 0, steepFrames: 0,
+            crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0,
+            shockFrames: 0, shockDuration: 0,
+            frames: 0, lastEyeOpen: true, lastThumbPos: null, lastBlinkTime: 0, blinkBuffer: []
         };
 
-        // 按顺序取题，避免重复
         if (stepIndex === 0) {
             currentQ = { type: 'baseline', time: 8, text: POOL_BASE[0], id: 1 };
         } else if (stepIndex === 1) {
@@ -307,7 +924,7 @@
         } else if (stepIndex === 4) {
             const prevLog = sessionLog[3];
             if (prevLog.q.type === 'stress' && prevLog.score > 20) {
-                currentQ = { type: 'trap', time: 10, text: "【最终追问】你的生理反应显示异常，请看着我，诚实地解释一下。", id: 5 };
+                currentQ = { type: 'trap', time: 10, text: "【最终追问】你的生理反应非常剧烈。请给出一个合理的解释。", id: 5 };
             } else {
                 generateReport(); return;
             }
@@ -328,21 +945,20 @@
         badge.innerText = `${currentQ.type.toUpperCase()} PHASE`;
         badge.style.color = color;
         badge.style.borderColor = color;
-        
         document.getElementById('hud_text').innerText = currentQ.text;
         
-        // --- 修复点 2：进度条动画逻辑 ---
         const bar = document.getElementById('hud_bar');
         bar.style.transition = 'none'; 
         bar.style.width = '0%';
         bar.style.backgroundColor = color;
-        bar.style.boxShadow = `0 0 15px ${color}`; // 发光同步颜色
+        bar.style.boxShadow = `0 0 15px ${color}`;
         
-        // 增加延时，确保浏览器渲染了 0% 的状态
-        setTimeout(() => {
-            bar.style.transition = `width ${currentQ.time}s linear`; 
-            bar.style.width = '100%'; 
-        }, 100); 
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                bar.style.transition = `width ${currentQ.time}s linear`; 
+                bar.style.width = '100%'; 
+            });
+        });
     }
 
     function finishQuestion() {
@@ -353,10 +969,27 @@
             const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
             const baseCPM = baseLogs.length ? baseLogs[0].cpm : 20;
             
-            if (cpm > baseCPM * 1.4) score += 15;
+            // 评分逻辑包含所有新特征
+            if (cpm > baseCPM * 1.4) score += 10;
+            if (stats.blinkStorms > 0) score += 15; // 眨眼风暴
+            
             if (stats.noseTouch > 5) score += 10;
-            if (stats.lipCompress > 15) score += 10;
+            if (stats.neckTouch > 5) score += 10;
+            if (stats.lipCompress > 10) score += 8;
+            if (stats.contemptFrames > 10) score += 8; // 轻蔑
+            
             if (stats.rubFrames > 20) score += 10;
+            if (stats.steepFrames > 20) score -= 5; // 塔尖手势减分(自信)
+            
+            if (stats.ventralDenial > 10) score += 10; // 腹侧否认
+            if (stats.freezeFrames > 20) score += 10; // 冻结
+            if (stats.shrugFrames > 10) score += 5;   // 假耸肩
+            
+            // 真假惊讶判定
+            if (stats.shockFrames > 0) {
+                if (stats.shockDuration > 30) score += 10; // 假惊讶 (>1s)
+                else score += 5; // 真惊讶
+            }
         }
         sessionLog.push({ q: currentQ, stats: stats, cpm: cpm, score: score });
     }
@@ -366,7 +999,7 @@
         if(canvas.width > 0) evidence[type] = canvas.toDataURL('image/jpeg', 0.8);
     }
 
-    // --- AI 核心 ---
+    // --- AI 核心分析 (V27 Deep Logic) ---
     const canvas = document.getElementById('main_canvas');
     const ctx = canvas.getContext('2d');
     const sideCtx = {
@@ -380,12 +1013,8 @@
         const vW = video.videoWidth; const vH = video.videoHeight;
         
         if (vW && vH) {
-            if (canvas.width !== vW || canvas.height !== vH) {
-                canvas.width = vW; canvas.height = vH;
-            }
-            ctx.save(); 
-            ctx.clearRect(0, 0, vW, vH); 
-            ctx.drawImage(video, 0, 0, vW, vH);
+            if (canvas.width !== vW || canvas.height !== vH) { canvas.width = vW; canvas.height = vH; }
+            ctx.save(); ctx.clearRect(0, 0, vW, vH); ctx.drawImage(video, 0, 0, vW, vH);
         } else { return; }
 
         if (!results.faceLandmarks) { ctx.restore(); return; }
@@ -395,6 +1024,7 @@
         const leftEyeH = Math.abs(face[159].y - face[145].y);
         const lipH = Math.abs(face[13].y - face[14].y);
 
+        // 基准
         if (currentQ && currentQ.type === 'baseline') {
             stats.baseEyeH = (stats.baseEyeH * stats.frames + leftEyeH) / (stats.frames + 1);
             stats.baseLipH = (stats.baseLipH * stats.frames + lipH) / (stats.frames + 1);
@@ -403,72 +1033,132 @@
         drawConnectors(ctx, face, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
 
         let frameAnomaly = 0;
-        const tags = { nose: false, neck: false, lip: false, rub: false, cross: false, shock: false };
 
-        // 1. 抿嘴 (对比基准)
-        if (currentQ && currentQ.type !== 'baseline' && stats.baseLipH > 0) {
-            if (lipH < stats.baseLipH * 0.6) {
-                tags.lip = true; stats.lipCompress++; frameAnomaly += 3;
-            }
-        }
-
-        // 2. 惊讶 (对比锁定基准)
-        if (currentQ && currentQ.type !== 'baseline' && evidence.frozenEyeBase > 0) {
-            if (leftEyeH > evidence.frozenEyeBase * 1.4) {
-                tags.shock = true; stats.shockFrames++; frameAnomaly += 5;
-            }
-        }
-        
-        // 3. 眨眼
-        if(currentQ) {
+        // --- 1. 眼睛逻辑 ---
+        if (currentQ) {
             const isClosed = leftEyeH < 0.012;
-            if (isClosed && stats.lastEyeOpen) stats.blinks++;
+            
+            // 眨眼检测
+            if (isClosed && stats.lastEyeOpen) {
+                stats.blinks++;
+                const now = Date.now();
+                // 眨眼风暴 (500ms 内 > 3次)
+                stats.blinkBuffer.push(now);
+                stats.blinkBuffer = stats.blinkBuffer.filter(t => now - t < 500);
+                if (stats.blinkBuffer.length > 3) {
+                    stats.blinkStorms++; frameAnomaly += 8;
+                }
+            }
+            // 视线阻断 (>1s)
+            if (isClosed) {
+                if(!stats.closeStart) stats.closeStart = Date.now();
+                if(Date.now() - stats.closeStart > 1000) frameAnomaly += 5;
+            } else { stats.closeStart = null; }
+            
             stats.lastEyeOpen = !isClosed;
         }
 
-        // 4. 手部
-        const checkHand = (hand) => {
+        // --- 2. 微表情 ---
+        // 惊讶 (对比锁定基准)
+        if (currentQ && currentQ.type !== 'baseline' && evidence.frozenEyeBase > 0) {
+            if (leftEyeH > evidence.frozenEyeBase * 1.4) {
+                stats.shockFrames++; 
+                stats.shockDuration++; // 累计时长
+                frameAnomaly += 5;
+            } else {
+                stats.shockDuration = 0; // 重置
+            }
+        }
+        
+        // 抿嘴
+        if (currentQ.type !== 'baseline' && stats.baseLipH > 0 && lipH < stats.baseLipH * 0.6) {
+            stats.lipCompress++; frameAnomaly += 3;
+        }
+
+        // 轻蔑 (Contempt) - 嘴角不对称
+        const leftMouthY = face[61].y;
+        const rightMouthY = face[291].y;
+        if (Math.abs(leftMouthY - rightMouthY) > 0.02) { // 阈值需调试
+            stats.contemptFrames++; frameAnomaly += 4;
+        }
+
+        // --- 3. 手部逻辑 ---
+        const checkHand = (hand, isLeft) => {
             if (!hand) return;
             const idx = hand[8]; const thumb = hand[4]; const wrist = hand[0];
 
+            // 摸鼻
             if (Math.sqrt(Math.pow(idx.x - noseTip.x, 2) + Math.pow(idx.y - noseTip.y, 2)) < 0.05) {
-                tags.nose = true; stats.noseTouch++; frameAnomaly += 8;
+                stats.noseTouch++; frameAnomaly += 8;
                 ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 20, 0, 2*Math.PI);
                 ctx.strokeStyle = '#ff2a6d'; ctx.lineWidth = 3; ctx.stroke();
             }
-            if (Math.sqrt(Math.pow(thumb.x - idx.x, 2) + Math.pow(thumb.y - idx.y, 2)) < 0.04) {
-                if (stats.lastThumbPos) {
-                    const move = Math.sqrt(Math.pow(thumb.x - stats.lastThumbPos.x, 2) + Math.pow(thumb.y - stats.lastThumbPos.y, 2));
-                    if (move > 0.003) { tags.rub = true; stats.rubFrames++; frameAnomaly += 3; }
-                }
-                stats.lastThumbPos = {x: thumb.x, y: thumb.y};
-            }
+            // 摸脖子
             if (results.poseLandmarks) {
                 const neckY = (results.poseLandmarks[11].y + results.poseLandmarks[12].y) / 2;
                 if (Math.abs(wrist.y - neckY) < 0.1) {
-                    tags.neck = true; stats.neckTouch++; frameAnomaly += 6;
+                    stats.neckTouch++; frameAnomaly += 6;
                 }
             }
+            // 搓手 (焦虑)
+            if (Math.sqrt(Math.pow(thumb.x - idx.x, 2) + Math.pow(thumb.y - idx.y, 2)) < 0.04) {
+                if (stats.lastThumbPos) {
+                    const move = Math.sqrt(Math.pow(thumb.x - stats.lastThumbPos.x, 2) + Math.pow(thumb.y - stats.lastThumbPos.y, 2));
+                    if (move > 0.003) { stats.rubFrames++; frameAnomaly += 3; }
+                }
+                stats.lastThumbPos = {x: thumb.x, y: thumb.y};
+            }
         };
-        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks);
-        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks);
+        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks, true);
+        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks, false);
 
-        // 5. 抱胸
-        if (results.poseLandmarks) {
-            const lW = results.poseLandmarks[15]; const rW = results.poseLandmarks[16];
-            const lS = results.poseLandmarks[11]; const rH = results.poseLandmarks[24];
-            if (lW.y > lS.y && lW.y < rH.y && Math.abs(lW.x - rW.x) < 0.2) {
-                tags.cross = true; stats.crossFrames++; frameAnomaly += 4;
+        // 塔尖手势 (Steepling) - 自信
+        if (results.leftHandLandmarks && results.rightHandLandmarks) {
+            const lIdx = results.leftHandLandmarks[8];
+            const rIdx = results.rightHandLandmarks[8];
+            const lWrist = results.leftHandLandmarks[0];
+            const rWrist = results.rightHandLandmarks[0];
+            
+            // 指尖近，手腕远
+            const tipDist = Math.sqrt(Math.pow(lIdx.x - rIdx.x, 2) + Math.pow(lIdx.y - rIdx.y, 2));
+            const wristDist = Math.sqrt(Math.pow(lWrist.x - rWrist.x, 2) + Math.pow(lWrist.y - rWrist.y, 2));
+            
+            if (tipDist < 0.05 && wristDist > 0.15) {
+                stats.steepFrames++; // 这是一个减分项(代表自信)
             }
         }
 
-        document.getElementById('tag_lip').className = `tag danger ${tags.lip ? 'active' : ''}`;
-        document.getElementById('tag_nose').className = `tag danger ${tags.nose ? 'active' : ''}`;
-        document.getElementById('tag_neck').className = `tag warn ${tags.neck ? 'active' : ''}`;
-        document.getElementById('tag_rub').className = `tag warn ${tags.rub ? 'active' : ''}`;
-        document.getElementById('tag_shock').className = `tag info ${tags.shock ? 'active' : ''}`;
-        document.getElementById('tag_cross').className = `tag warn ${tags.cross ? 'active' : ''}`;
+        // --- 4. 躯干/本能反应 ---
+        if (results.poseLandmarks) {
+            const pose = results.poseLandmarks;
+            const lShldr = pose[11]; const rShldr = pose[12];
+            const lEar = pose[7]; const rEar = pose[8];
 
+            // 腹侧否认 (Ventral Denial) - Z轴差异
+            if (Math.abs(lShldr.z - rShldr.z) > 0.3) {
+                stats.ventralDenial++; frameAnomaly += 5;
+            }
+
+            // 冻结/乌龟效应 (Turtle Effect) - 耸肩缩脖
+            const shoulderEarDist = (Math.abs(lShldr.y - lEar.y) + Math.abs(rShldr.y - rEar.y)) / 2;
+            // 简单逻辑：如果距离显著小于平时的基准 (这里简化为阈值)
+            if (shoulderEarDist < 0.15) { 
+                stats.freezeFrames++; frameAnomaly += 5;
+            }
+
+            // 假耸肩 (Asymmetric Shrug) - 高度不一
+            if (Math.abs(lShldr.y - rShldr.y) > 0.05) {
+                stats.shrugFrames++; frameAnomaly += 4;
+            }
+            
+            // 抱胸
+            const lWrist = pose[15]; const rWrist = pose[16];
+            if (lWrist.y > lShldr.y && Math.abs(lWrist.x - rWrist.x) < 0.2) {
+                stats.crossFrames++; frameAnomaly += 4;
+            }
+        }
+
+        // 智能抓拍
         if (currentQ && (currentQ.type === 'stress' || currentQ.type === 'trap')) {
             if (frameAnomaly > evidence.maxScore) {
                 evidence.maxScore = frameAnomaly;
@@ -513,12 +1203,26 @@
             if (d.q.type !== 'baseline') {
                 const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
                 const baseCPM = baseLogs.length ? baseLogs[0].cpm : 20;
+                
                 if (d.cpm > baseCPM * 1.4) signals.push(`眨眼激增(${d.cpm})`);
+                if (d.stats.blinkStorms > 0) signals.push("眨眼风暴");
+                
                 if (d.stats.lipCompress > 15) signals.push("抿嘴掩饰");
-                if (d.stats.noseTouch > 5) signals.push("触碰鼻尖");
-                if (d.stats.neckTouch > 5) signals.push("触碰颈部");
+                if (d.stats.contemptFrames > 10) signals.push("轻蔑表情");
+                
+                if (d.stats.noseTouch > 5) signals.push("触碰鼻尖(掩饰)");
+                if (d.stats.neckTouch > 5) signals.push("触碰颈部(不安)");
                 if (d.stats.rubFrames > 20) signals.push("焦虑搓手");
-                if (d.stats.shockFrames > 5) signals.push("惊讶反应");
+                if (d.stats.steepFrames > 10) signals.push("塔尖手势(自信)"); // 特殊
+                
+                if (d.stats.ventralDenial > 10) signals.push("腹侧否认(逃离)");
+                if (d.stats.freezeFrames > 20) signals.push("冻结反应");
+                if (d.stats.shrugFrames > 10) signals.push("假耸肩");
+                
+                if (d.stats.shockFrames > 0) {
+                    if (d.stats.shockDuration > 30) signals.push("假惊讶(表演)");
+                    else signals.push("真惊讶");
+                }
             }
             const isRisk = signals.length > 0;
             html += `
@@ -534,4 +1238,3 @@
 </script>
 </body>
 </html>
-
