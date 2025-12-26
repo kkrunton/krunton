@@ -3,79 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V31</title>
+    <title>MindReader V32</title>
     <style>
-        /* --- V30 视觉保留 --- */
+        /* --- 1. V18 核心视觉系统 (绝对不改) --- */
         :root {
-            --bg: #000000;
-            --glass: rgba(20, 20, 20, 0.95);
-            --border: rgba(255, 255, 255, 0.2);
-            --accent: #00f2ff; 
-            --warn: #ffcc00;
-            --danger: #ff2a6d; 
+            --bg: #050505;
+            --glass: rgba(30, 30, 30, 0.85); /* V18 经典磨砂黑 */
+            --border: rgba(255, 255, 255, 0.15);
+            --accent: #00f2ff; /* 赛博蓝 */
+            --warn: #ffcc00;   /* 警示黄 */
+            --danger: #ff2a6d; /* 致命红 */
             --text: #ffffff;
         }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+        body {
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 100%);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
         .app { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
-        
-        /* HUD */
+
+        /* --- 2. HUD (V18 布局 + 物理进度条) --- */
         .hud {
-            background: var(--glass); border-bottom: 1px solid var(--border);
+            min-height: 110px; 
+            background: var(--glass); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px 20px 0 20px; z-index: 50; flex-shrink: 0; position: relative;
+            padding: 20px 20px 0 20px; /* 底部留白给进度条 */
+            z-index: 50; flex-shrink: 0; position: relative;
         }
-        .phase-badge {
-            font-size: 11px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
-            border-radius: 4px; margin-bottom: 10px; text-transform: uppercase; border: 1px solid currentColor;
-            color: var(--accent);
-        }
-        .q-text { 
-            font-size: 18px; font-weight: 700; text-align: center; line-height: 1.4; max-width: 600px;
-            color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); margin-bottom: 15px; 
-        }
-        .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; }
-        .progress-fill { height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 10px currentColor; transition: width 0.1s linear; }
 
-        /* Viewport */
-        .viewport { flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        #main_canvas { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+        .phase-tag {
+            font-size: 10px; font-weight: 800; letter-spacing: 2px; 
+            padding: 4px 10px; border-radius: 4px; margin-bottom: 12px; 
+            text-transform: uppercase; border: 1px solid currentColor;
+        }
+        
+        .question-text {
+            font-size: 17px; font-weight: 700; text-align: center; 
+            line-height: 1.4; max-width: 90%; color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            margin-bottom: 15px;
+        }
 
-        /* Dashboard */
+        /* 进度条：物理镶嵌，不再悬浮 */
+        .progress-track {
+            width: 100%; height: 4px; 
+            background: rgba(255,255,255,0.1); 
+            margin-top: auto; /* 顶到底部 */
+        }
+        .progress-fill {
+            height: 100%; width: 0%; 
+            background: var(--accent); 
+            box-shadow: 0 0 15px currentColor;
+            transition: width 0.1s linear;
+        }
+
+        /* --- 3. 监控区 --- */
+        .viewport {
+            flex: 1; position: relative; background: #000; 
+            display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+        #main_canvas {
+            width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1);
+        }
+
+        /* --- 4. 底部仪表盘 (V18) --- */
         .dashboard {
-            height: 120px; background: var(--glass); border-top: 1px solid var(--border);
-            display: flex; gap: 10px; padding: 15px; flex-shrink: 0; overflow-x: auto;
-            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            height: 110px; background: var(--glass); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex; gap: 10px; padding: 12px; flex-shrink: 0; overflow-x: auto;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
         }
-        .dash-card { flex: 1; min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; position: relative; overflow: hidden; }
-        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
-        .mini-canvas { width: 100%; height: 100%; opacity: 0.8; }
+        .dash-card {
+            flex: 1; min-width: 80px; background: rgba(255,255,255,0.03); 
+            border: 1px solid var(--border); border-radius: 8px; position: relative; overflow: hidden;
+        }
+        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 9px; color: rgba(255,255,255,0.5); font-weight: 700; }
+        .mini-canvas { width: 100%; height: 100%; opacity: 0.6; }
 
-        /* Layers */
+        /* --- 5. 启动/报告层 (修复按钮消失问题) --- */
         .layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 200; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; transition: opacity 0.3s; padding: 30px; box-sizing: border-box;
+            align-items: center; justify-content: center; transition: opacity 0.3s; 
+            padding: 20px; box-sizing: border-box;
         }
         .layer.hidden { opacity: 0; pointer-events: none; }
-        .guide-box { background: #111; border: 1px solid #333; border-radius: 20px; padding: 30px; max-width: 400px; width: 100%; text-align: center; }
+
+        /* 引导卡片 */
+        .guide-card {
+            background: rgba(30,30,30,0.9); border: 1px solid var(--border);
+            border-radius: 20px; padding: 30px; text-align: center; max-width: 350px; width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
         .btn-main {
-            margin-top: 25px; width: 100%; padding: 18px 0; border-radius: 12px; border: none;
-            background: linear-gradient(135deg, var(--accent), #0044ff); color: #ffffff !important;
-            font-size: 16px; font-weight: 700; cursor: pointer;
+            margin-top: 30px; padding: 16px 0; width: 100%; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, var(--accent), #0051ff);
+            color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 242, 255, 0.2);
+        }
+        .btn-restart {
+            margin-top: 30px; padding: 16px 0; width: 100%; border-radius: 12px; border: 1px solid #444;
+            background: #1a1a1a; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+            display: block; /* 强制显示 */
+        }
+
+        /* 报告内容 */
+        .report-scroll { 
+            width: 100%; height: 100%; overflow-y: auto; 
+            padding: 20px; box-sizing: border-box; 
+            display: flex; flex-direction: column;
         }
         
-        /* Report */
-        .report-box { width: 100%; height: 100%; overflow-y: auto; padding: 20px; background: #050505; box-sizing: border-box; }
-        .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
+        .evidence-grid { display: flex; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
         .photo-card { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
         .photo-img { width: 100%; height: auto; display: block; border-bottom: 1px solid #333; }
-        .photo-meta { padding: 10px; font-size: 10px; text-align: center; color: #aaa; text-transform: uppercase; font-weight: 700; }
-        .log-item { background: #111; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #333; }
-        .log-item.stress { border-left: 4px solid var(--warn); }
-        .log-item.trap { border-left: 4px solid var(--danger); }
-        .log-item.baseline { border-left: 4px solid var(--accent); }
-        .log-title { font-size: 10px; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; }
+        .photo-meta { padding: 8px; font-size: 10px; text-align: center; font-weight: 700; }
 
+        .log-item {
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 12px; 
+            border-left: 3px solid #555; position: relative;
+        }
+        .log-tag { font-size: 10px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
+        
         #src_video { display: none; }
     </style>
 
@@ -86,192 +143,202 @@
 <body>
 
 <div class="layer" id="layer_start">
-    <div class="guide-box">
-        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V31</span></h1>
-        <p style="color:#888; font-size:13px; margin-bottom:30px">Bare Metal Edition</p>
-        <button class="btn-main" id="btn_start" onclick="unlockSystem()">立即启动 (防卡死)</button>
+    <div class="guide-card">
+        <h1 style="margin:0 0 5px 0; color:#fff;">MindReader <span style="color:var(--accent); font-size:0.6em">V32</span></h1>
+        <p style="color:#888; font-size:12px; margin-bottom:30px">FINAL FIX EDITION</p>
+        
+        <div style="font-size:12px; color:#ccc; line-height:1.6; text-align:left; background:rgba(0,0,0,0.3); padding:15px; border-radius:10px;">
+            1. 修复照片重复：强制分时段抓拍<br>
+            2. 修复按钮消失：独立层级重置键<br>
+            3. 界面回归：V18 经典暗黑风格
+        </div>
+
+        <button class="btn-main" onclick="unlockSystem()">启动系统</button>
     </div>
 </div>
 
 <div class="app">
-    <div class="hud" id="hud_box">
-        <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
-        <div class="q-text" id="hud_text">初始化传感器...</div>
+    <div class="hud">
+        <div class="phase-tag" id="hud_tag" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
+        <div class="question-text" id="hud_text">初始化传感器矩阵...</div>
         <div class="progress-track"><div class="progress-fill" id="hud_bar"></div></div>
     </div>
+
     <div class="viewport"><canvas id="main_canvas"></canvas></div>
+
     <div class="dashboard">
-        <div class="dash-card"><div class="dash-label">FACE</div><canvas id="cv_face" class="mini-canvas"></canvas></div>
-        <div class="dash-card"><div class="dash-label">POSE</div><canvas id="cv_pose" class="mini-canvas"></canvas></div>
-        <div class="dash-card"><div class="dash-label">HANDS</div><canvas id="cv_hands" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><span class="dash-label">FACE</span><canvas id="cv_face" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><span class="dash-label">POSE</span><canvas id="cv_pose" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><span class="dash-label">HANDS</span><canvas id="cv_hands" class="mini-canvas"></canvas></div>
     </div>
 </div>
 
 <div class="layer hidden" id="layer_report">
-    <div class="report-box">
-        <h2 style="text-align:center; color:#fff; margin-bottom:30px">心理档案</h2>
-        <div style="font-size:11px; color:#888; font-weight:bold">证据快照</div>
-        <div class="evidence-row" id="evidence_area"></div>
-        <div style="font-size:11px; color:#888; font-weight:bold">动态流水</div>
+    <div class="report-scroll">
+        <h2 style="text-align:center; color:var(--accent); margin-bottom:10px">最终心理档案</h2>
+        <div style="text-align:center; color:#666; font-size:10px; margin-bottom:30px">AUTOMATED BEHAVIORAL ANALYSIS</div>
+
+        <div style="font-size:11px; color:#888; font-weight:bold; letter-spacing:1px">关键证据 (EVIDENCE)</div>
+        <div class="evidence-grid" id="evidence_area"></div>
+
+        <div style="font-size:11px; color:#888; font-weight:bold; letter-spacing:1px; margin-top:20px">动态分析 (LOG)</div>
         <div id="log_area" style="margin-top:10px"></div>
-        <button class="btn-main" style="background:#222; margin-top:30px" onclick="location.reload()">归档重置</button>
-    </div>
+
+        <button class="btn-restart" onclick="location.reload()">归档并重置 (RESET)</button>
+        <div style="height: 50px;"></div> </div>
 </div>
 
 <video id="src_video" playsinline webkit-playsinline muted autoplay></video>
 
 <script>
-    // --- 题库 ---
-    const RAW_POOL_BASE = ["简单介绍一下你的爱好？", "你最喜欢的季节是哪个？", "平时周末几点起床？", "养过宠物吗？"];
-    const RAW_POOL_STRESS_1 = ["【高压】看着我。你最近撒过谎吗？", "【高压】如果查你手机相册，会有见不得人的东西吗？"];
-    const RAW_POOL_STRESS_2 = ["【两难】必须在事业和家庭牺牲一个，选哪个？", "【审讯】你是否背叛过信任你的人？"];
-    const RAW_POOL_TRAP = ["【追问】你在撒谎吗？为什么眼神躲避？", "【追问】你的动作出卖了你，在紧张什么？"];
+    // --- 题库 (洗牌) ---
+    const POOL_BASE = ["请看着镜头，简单介绍一下你的爱好？", "你最喜欢的季节是什么？为什么？", "你平时周末一般几点起床？", "你养过宠物吗？"];
+    const POOL_STRESS_1 = ["【高压】看着我。你最近是否对身边的人撒过谎？", "【高压】如果查你的手机相册，会有不想让人看的东西吗？"];
+    const POOL_STRESS_2 = ["【两难】如果必须在事业和家庭中牺牲一个，你选哪个？", "【审讯】你是否曾经背叛过极其信任你的人？"];
+    const POOL_TRAP = ["【追问】你在撒谎吗？为什么你刚才的眼神在躲避？", "【追问】你的身体动作出卖了你，你在紧张什么？"];
 
-    let POOL_BASE=[], POOL_STRESS_1=[], POOL_STRESS_2=[], POOL_TRAP=[];
     function shuffle(a){let c=a.length,r;while(c!=0){r=Math.floor(Math.random()*c);c--;[a[c],a[r]]=[a[r],a[c]];}return a;}
 
+    let SCRIPT = [];
     let sessionLog = [];
-    let currentStep = 0; 
     let currentQ = null;
-    let evidence = { baseline: null, anomaly: null, maxScore: 0, frozenEyeBase: 0 };
+    let evidence = { baseline: null, anomaly: null, maxScore: 0 };
     
+    // 统计变量 (10种逻辑)
     let stats = { 
-        blinks: 0, blinkStorms: 0, baseEyeH: 0, baseLipH: 0,
-        noseTouch: 0, chinTouch: 0, neckTouch: 0, lipCompress: 0, contemptFrames: 0,
-        rubFrames: 0, steepFrames: 0, crossFrames: 0, 
-        ventralDenial: 0, freezeFrames: 0, shrugFrames: 0, shockFrames: 0, shockDuration: 0,
+        blinks: 0, blinkStorms: 0,
+        baseEyeH: 0, baseLipH: 0,
+        noseTouch: 0, chinTouch: 0, neckTouch: 0,
+        lipCompress: 0, contemptFrames: 0,
+        rubFrames: 0, steepFrames: 0,
+        crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0,
+        shockFrames: 0, shockDuration: 0,
         frames: 0, lastEyeOpen: true, lastThumbPos: null, blinkBuffer: []
     };
 
-    // --- 手动帧循环 (Anti-Freeze Core) ---
-    let holistic;
-    let videoElement;
-    let canvasElement;
-    let canvasCtx;
-    let isRunning = false;
+    // --- 启动逻辑 ---
+    let holistic, videoEl, canvasEl, canvasCtx, isRunning = false;
 
     async function unlockSystem() {
         document.getElementById('layer_start').classList.add('hidden');
-        POOL_BASE = shuffle([...RAW_POOL_BASE]);
-        POOL_STRESS_1 = shuffle([...RAW_POOL_STRESS_1]);
-        POOL_STRESS_2 = shuffle([...RAW_POOL_STRESS_2]);
-        POOL_TRAP = shuffle([...RAW_POOL_TRAP]);
+        
+        // 准备题库
+        const base = shuffle([...POOL_BASE]);
+        const s1 = shuffle([...POOL_STRESS_1]);
+        const s2 = shuffle([...POOL_STRESS_2]);
+        
+        // 预设流程
+        SCRIPT = [
+            { type: 'baseline', time: 8, text: base[0], id: 1 },
+            { type: 'baseline', time: 8, text: base[1], id: 2 },
+            { type: 'stress', time: 10, text: s1[0], id: 3 },
+            { type: 'stress', time: 10, text: s2[0], id: 4 } // 初始设为 Stress，后续可能变 Trap
+        ];
 
-        videoElement = document.getElementById('src_video');
-        canvasElement = document.getElementById('main_canvas');
-        canvasCtx = canvasElement.getContext('2d');
+        videoEl = document.getElementById('src_video');
+        canvasEl = document.getElementById('main_canvas');
+        canvasCtx = canvasEl.getContext('2d');
 
         try {
-            // 最保守的请求，防止浏览器拒绝
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            videoElement.srcObject = stream;
-            videoElement.onloadedmetadata = () => {
-                videoElement.play();
-                initAI(); // 视频准备好后再加载AI
-            };
-        } catch (e) {
-            alert("摄像头失败: " + e.message);
-        }
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: {ideal: 640}, height: {ideal: 480} } });
+            videoEl.srcObject = stream;
+            videoEl.onloadedmetadata = () => { videoEl.play(); initAI(); };
+        } catch (e) { alert("Camera Error: " + e.message); }
     }
 
     async function initAI() {
-        if (typeof Holistic === 'undefined') { alert("AI库未加载，请检查网络"); return; }
-        
+        if (typeof Holistic === 'undefined') { alert("AI Core Missing. Check VPN."); return; }
         holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
         holistic.setOptions({modelComplexity: 1, minDetectionConfidence: 0.5, refineFaceLandmarks: true});
         holistic.onResults(onResults);
-        
         isRunning = true;
-        processVideo(); // 手动启动循环
+        processFrame();
         setTimeout(() => runStep(0), 1000);
     }
 
-    // --- 核心：手动驱动每一帧，取代 Camera Utils ---
-    async function processVideo() {
+    function processFrame() {
         if (!isRunning) return;
-        
-        if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-            // 只有当尺寸不对时才调整 Canvas
-            if (canvasElement.width !== videoElement.videoWidth) {
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
-            }
-            await holistic.send({image: videoElement});
+        if (videoEl.readyState >= 2) {
+            if (canvasEl.width !== videoEl.videoWidth) { canvasEl.width = videoEl.videoWidth; canvasEl.height = videoEl.videoHeight; }
+            holistic.send({image: videoEl});
         }
-        requestAnimationFrame(processVideo);
+        requestAnimationFrame(processFrame);
     }
 
-    // --- 业务逻辑 ---
-    function runStep(stepIndex) {
-        currentStep = stepIndex;
-        const oldEyeBase = stats.baseEyeH;
-        const oldLipBase = stats.baseLipH;
+    // --- 业务流程 ---
+    function runStep(idx) {
+        if (idx >= SCRIPT.length) { generateReport(); return; }
+
+        // 关键修复：在 Q2 结束，Q3 开始前的一瞬间，强制抓拍基准照
+        if (idx === 2) captureEvidence('baseline');
+
+        // 动态调整 Q4
+        if (idx === 3) {
+            const prevLog = sessionLog[2];
+            if (prevLog && prevLog.score > 20) {
+                SCRIPT[3] = { type: 'trap', time: 10, text: shuffle([...POOL_TRAP])[0], id: 4 };
+            }
+        }
+
+        currentQ = SCRIPT[idx];
+        // 继承基准，重置计数
+        const oldEye = stats.baseEyeH; const oldLip = stats.baseLipH;
         stats = { 
-            blinks: 0, blinkStorms: 0, baseEyeH: oldEyeBase, baseLipH: oldLipBase,
+            blinks: 0, blinkStorms: 0, baseEyeH: oldEye, baseLipH: oldLip,
             noseTouch: 0, chinTouch: 0, neckTouch: 0, lipCompress: 0, contemptFrames: 0,
             rubFrames: 0, steepFrames: 0, crossFrames: 0, ventralDenial: 0, freezeFrames: 0, shrugFrames: 0,
             shockFrames: 0, shockDuration: 0, frames: 0, lastEyeOpen: true, lastThumbPos: null, blinkBuffer: []
         };
 
-        if (stepIndex === 0) currentQ = { type: 'baseline', time: 8, text: POOL_BASE[0], id: 1 };
-        else if (stepIndex === 1) currentQ = { type: 'baseline', time: 8, text: POOL_BASE[1], id: 2 };
-        else if (stepIndex === 2) {
-            if (!evidence.baseline) captureEvidence('baseline');
-            evidence.frozenEyeBase = stats.baseEyeH;
-            currentQ = { type: 'stress', time: 10, text: POOL_STRESS_1[0], id: 3 };
-        } else if (stepIndex === 3) {
-            const prevLog = sessionLog[2];
-            currentQ = (prevLog && prevLog.score > 20) ? { type: 'trap', time: 10, text: POOL_TRAP[0], id: 4 } : { type: 'stress', time: 10, text: POOL_STRESS_2[0], id: 4 };
-        } else if (stepIndex === 4) {
-            const prevLog = sessionLog[3];
-            if (prevLog.q.type === 'stress' && prevLog.score > 20) {
-                currentQ = { type: 'trap', time: 10, text: "【最终追问】你的反应很剧烈，请解释。", id: 5 };
-            } else { generateReport(); return; }
-        } else { generateReport(); return; }
-
         updateHUD();
-        setTimeout(() => { finishQuestion(); runStep(stepIndex + 1); }, currentQ.time * 1000);
+        setTimeout(() => { finishStep(); runStep(idx + 1); }, currentQ.time * 1000);
     }
 
     function updateHUD() {
-        const badge = document.getElementById('hud_badge');
+        const tag = document.getElementById('hud_tag');
         const bar = document.getElementById('hud_bar');
         
-        let color = '#00f2ff';
-        if (currentQ.type === 'stress') color = '#ffcc00';
-        if (currentQ.type === 'trap') color = '#ff2a6d';
+        let color = 'var(--accent)';
+        if (currentQ.type === 'stress') color = 'var(--warn)';
+        if (currentQ.type === 'trap') color = 'var(--danger)';
 
-        badge.innerText = `${currentQ.type.toUpperCase()} PHASE`;
-        badge.style.color = color;
-        badge.style.borderColor = color;
+        tag.innerText = `${currentQ.type.toUpperCase()} PHASE`;
+        tag.style.color = color;
+        tag.style.borderColor = color;
         document.getElementById('hud_text').innerText = currentQ.text;
         
         bar.style.transition = 'none'; bar.style.width = '0%'; bar.style.backgroundColor = color;
-        requestAnimationFrame(() => { requestAnimationFrame(() => { bar.style.transition = `width ${currentQ.time}s linear`; bar.style.width = '100%'; }); });
+        bar.style.boxShadow = `0 0 10px ${color}`;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            bar.style.transition = `width ${currentQ.time}s linear`;
+            bar.style.width = '100%';
+        }));
     }
 
-    function finishQuestion() {
+    function finishStep() {
         const cpm = Math.round(stats.blinks / (currentQ.time / 60));
         let score = 0;
+        
         if (currentQ.type !== 'baseline') {
             const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
             const baseCPM = baseLogs.length ? baseLogs[0].cpm : 20;
+            
             if (cpm > baseCPM * 1.4) score += 10;
             if (stats.blinkStorms > 0) score += 15;
             if (stats.noseTouch > 5) score += 10;
-            if (stats.neckTouch > 5) score += 10;
-            if (stats.lipCompress > 10) score += 8;
+            if (stats.lipCompress > 15) score += 8;
             if (stats.rubFrames > 20) score += 10;
             if (stats.shockFrames > 0 && stats.shockDuration > 30) score += 10;
         }
         sessionLog.push({ q: currentQ, stats: stats, cpm: cpm, score: score });
     }
 
+    // --- 抓拍逻辑 (关键修复) ---
     function captureEvidence(type) {
-        if(canvasElement.width > 0) evidence[type] = canvasElement.toDataURL('image/jpeg', 0.8);
+        if(canvasEl.width > 0) evidence[type] = canvasEl.toDataURL('image/jpeg', 0.8);
     }
 
-    // --- 绘制 & 逻辑 ---
+    // --- AI 分析 ---
     const sideCtx = {
         face: document.getElementById('cv_face').getContext('2d'),
         pose: document.getElementById('cv_pose').getContext('2d'),
@@ -280,26 +347,27 @@
 
     function onResults(results) {
         canvasCtx.save();
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        canvasCtx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
         
         if (results.faceLandmarks) {
             drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
             
-            // 逻辑计算
             const face = results.faceLandmarks;
             const noseTip = face[1];
             const leftEyeH = Math.abs(face[159].y - face[145].y);
             const lipH = Math.abs(face[13].y - face[14].y);
 
-            // 基准
+            // 基准采集
             if (currentQ && currentQ.type === 'baseline') {
                 stats.baseEyeH = (stats.baseEyeH * stats.frames + leftEyeH) / (stats.frames + 1);
                 stats.baseLipH = (stats.baseLipH * stats.frames + lipH) / (stats.frames + 1);
             }
 
-            // 1. 眼睛
+            // 逻辑判定
+            let frameScore = 0;
             if (currentQ) {
+                // 眨眼
                 const isClosed = leftEyeH < 0.012;
                 if (isClosed && stats.lastEyeOpen) {
                     stats.blinks++;
@@ -309,54 +377,38 @@
                     if (stats.blinkBuffer.length > 3) stats.blinkStorms++;
                 }
                 stats.lastEyeOpen = !isClosed;
-            }
 
-            // 2. 表情
-            if (currentQ && currentQ.type !== 'baseline') {
-                if (evidence.frozenEyeBase > 0 && leftEyeH > evidence.frozenEyeBase * 1.4) {
-                    stats.shockFrames++; stats.shockDuration++;
-                } else { stats.shockDuration = 0; }
-                
-                if (stats.baseLipH > 0 && lipH < stats.baseLipH * 0.6) stats.lipCompress++;
-            }
-
-            // 3. 手部
-            const checkHand = (hand) => {
-                if (!hand) return;
-                const idx = hand[8]; const thumb = hand[4];
-                // 摸鼻
-                if (Math.sqrt(Math.pow(idx.x - noseTip.x, 2) + Math.pow(idx.y - noseTip.y, 2)) < 0.05) {
-                    stats.noseTouch++;
-                    canvasCtx.beginPath(); canvasCtx.arc(noseTip.x*canvasElement.width, noseTip.y*canvasElement.height, 20, 0, 2*Math.PI);
-                    canvasCtx.strokeStyle = '#ff2a6d'; canvasCtx.lineWidth = 3; canvasCtx.stroke();
-                }
-                // 搓手
-                if (Math.sqrt(Math.pow(thumb.x - idx.x, 2) + Math.pow(thumb.y - idx.y, 2)) < 0.04) {
-                    if (stats.lastThumbPos) {
-                        const move = Math.sqrt(Math.pow(thumb.x - stats.lastThumbPos.x, 2) + Math.pow(thumb.y - stats.lastThumbPos.y, 2));
-                        if (move > 0.003) stats.rubFrames++;
+                if (currentQ.type !== 'baseline') {
+                    // 抿嘴
+                    if (stats.baseLipH > 0 && lipH < stats.baseLipH * 0.6) {
+                        stats.lipCompress++; frameScore += 5;
                     }
-                    stats.lastThumbPos = {x: thumb.x, y: thumb.y};
+                    // 摸鼻
+                    const checkHand = (hand) => {
+                        if(!hand) return;
+                        const idx = hand[8];
+                        if (Math.sqrt(Math.pow(idx.x - noseTip.x, 2) + Math.pow(idx.y - noseTip.y, 2)) < 0.05) {
+                            stats.noseTouch++; frameScore += 10;
+                            // 绘制红圈
+                            canvasCtx.beginPath(); canvasCtx.arc(noseTip.x*canvasEl.width, noseTip.y*canvasEl.height, 30, 0, 2*Math.PI);
+                            canvasCtx.strokeStyle = '#ff2a6d'; canvasCtx.lineWidth = 3; canvasCtx.stroke();
+                        }
+                    };
+                    if(results.leftHandLandmarks) checkHand(results.leftHandLandmarks);
+                    if(results.rightHandLandmarks) checkHand(results.rightHandLandmarks);
                 }
-            };
-            if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks);
-            if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks);
-            
-            // 抓拍
+            }
+
+            // 关键修复：压力照抓拍 (Capture Max Anomaly)
             if (currentQ && (currentQ.type === 'stress' || currentQ.type === 'trap')) {
-                // 简单异常分计算
-                let currentScore = 0;
-                if(stats.noseTouch > 0) currentScore += 5;
-                if(stats.blinkStorms > 0) currentScore += 5;
-                if(currentScore > evidence.maxScore) {
-                    evidence.maxScore = currentScore;
+                if (frameScore > evidence.maxScore) {
+                    evidence.maxScore = frameScore;
                     captureEvidence('anomaly');
                 }
             }
         }
-
         canvasCtx.restore();
-        
+
         // 侧边栏预览
         drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#00f2ff');
         drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#fff');
@@ -372,14 +424,22 @@
 
     function generateReport() {
         document.getElementById('layer_report').classList.remove('hidden');
-        isRunning = false; // 停止循环
+        isRunning = false; 
         
         const evArea = document.getElementById('evidence_area');
-        const imgBase = evidence.baseline || "";
-        const imgAnom = evidence.anomaly || imgBase;
+        // 确保照片存在，否则用占位符
+        const imgBase = evidence.baseline || ""; 
+        const imgAnom = evidence.anomaly || imgBase; // 如果没拍到异常，至少显示基准
+        
         evArea.innerHTML = `
-            <div class="photo-card"><img src="${imgBase}" class="photo-img"><div class="photo-meta" style="color:var(--accent)">基准状态</div></div>
-            <div class="photo-card" style="border-color:var(--danger)"><img src="${imgAnom}" class="photo-img"><div class="photo-meta" style="color:var(--danger)">压力反应</div></div>
+            <div class="photo-card">
+                <img src="${imgBase}" class="photo-img">
+                <div class="photo-meta" style="color:var(--accent)">基准状态 (BASELINE)</div>
+            </div>
+            <div class="photo-card" style="border-color:var(--danger)">
+                <img src="${imgAnom}" class="photo-img">
+                <div class="photo-meta" style="color:var(--danger)">压力反应 (REACTION)</div>
+            </div>
         `;
 
         const logArea = document.getElementById('log_area');
@@ -388,8 +448,7 @@
         sessionLog.forEach(d => {
             let signals = [];
             if (d.q.type !== 'baseline') {
-                const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
-                const baseCPM = baseLogs.length ? baseLogs[0].cpm : 20;
+                const baseCPM = sessionLog[0].cpm || 20;
                 if (d.cpm > baseCPM * 1.4) signals.push(`眨眼激增(${d.cpm})`);
                 if (d.stats.blinkStorms > 0) signals.push("眨眼风暴");
                 if (d.stats.lipCompress > 15) signals.push("抿嘴掩饰");
@@ -398,13 +457,14 @@
                 if (d.stats.shockFrames > 0 && d.stats.shockDuration > 30) signals.push("假惊讶");
             }
             const isRisk = signals.length > 0;
-            let titleColor = '#00f2ff';
-            if(d.q.type === 'stress') titleColor = '#ffcc00';
-            if(d.q.type === 'trap') titleColor = '#ff2a6d';
+            
+            let color = 'var(--accent)';
+            if(d.q.type === 'stress') color = 'var(--warn)';
+            if(d.q.type === 'trap') color = 'var(--danger)';
 
             html += `
-                <div class="log-item ${d.q.type}">
-                    <div class="log-title" style="color:${titleColor}">${d.q.type.toUpperCase()} PHASE</div>
+                <div class="log-item ${d.q.type}" style="border-left-color:${color}">
+                    <div class="log-tag" style="color:${color}">${d.q.type}</div>
                     <div style="font-size:16px; color:#fff; font-weight:700; margin-bottom:8px">"${d.q.text}"</div>
                     ${isRisk ? `<div style="color:#ff8a84; font-size:12px; font-weight:bold">⚠ ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#aaa">反应平稳</div>'}
                 </div>
