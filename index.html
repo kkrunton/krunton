@@ -3,111 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V1.0</title>
+    <title>MindReader V20</title>
     <style>
-        /* --- 1. 视觉系统 (V1.0 Professional) --- */
+        /* --- 1. 严格沿用 V18 视觉风格 (勿动) --- */
         :root {
-            --bg: #050505;
-            --glass: rgba(30, 30, 30, 0.85);
+            --bg: #000000;
+            --glass: rgba(20, 20, 20, 0.85);
             --border: rgba(255, 255, 255, 0.15);
-            --accent: #007aff; /* iOS 蓝，更专业 */
-            --warn: #ffcc00;
-            --danger: #ff3b30;
+            --accent: #00f2ff; /* V18 经典赛博蓝 */
+            --warn: #ffcc00;   
+            --danger: #ff2a6d; /* V18 经典警示红 */
             --text: #ffffff;
         }
 
         body {
             background: var(--bg); color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", monospace;
             margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
         }
 
         .app { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
 
-        /* --- 2. 顶部题目栏 --- */
+        /* 顶部栏 (V18 布局) */
         .hud {
             min-height: 100px; background: var(--glass); border-bottom: 1px solid var(--border);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 10px 20px; z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
         }
         .phase-badge {
-            font-size: 10px; font-weight: 600; letter-spacing: 1px; padding: 4px 8px;
-            border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; background: rgba(255,255,255,0.1);
+            font-size: 10px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
+            border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; border: 1px solid currentColor;
         }
-        .q-text { font-size: 17px; font-weight: 600; text-align: center; line-height: 1.4; max-width: 600px; }
-        .progress { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 0%; transition: width 0.1s linear; }
+        .q-text { font-size: 16px; font-weight: 600; text-align: center; line-height: 1.4; max-width: 600px; }
+        .progress { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; transition: width 0.1s linear; }
 
-        /* --- 3. 监控画面 --- */
+        /* 监控区 */
         .viewport {
-            flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden;
+            flex: 1; position: relative; background: #050505; display: flex; justify-content: center; align-items: center; overflow: hidden;
         }
         #main_canvas {
             width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1);
         }
 
-        /* 实时反馈标签 */
+        /* 实时标签 (V18 样式) */
         .detect-tags {
-            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: none;
         }
         .tag {
-            background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 6px; font-size: 11px;
-            font-weight: 500; border-left: 3px solid; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; font-size: 10px;
+            font-weight: bold; border-left: 3px solid; opacity: 0; transition: opacity 0.2s;
         }
         .tag.active { opacity: 1; }
-        .tag.danger { border-color: var(--danger); color: #ff8a84; }
-        .tag.warn { border-color: var(--warn); color: #ffe684; }
-        .tag.info { border-color: var(--accent); color: #84c1ff; }
+        .tag.danger { border-color: var(--danger); color: var(--danger); }
+        .tag.warn { border-color: var(--warn); color: var(--warn); }
+        .tag.info { border-color: var(--accent); color: var(--accent); }
 
-        /* --- 4. 底部仪表盘 --- */
+        /* 底部仪表盘 (V18 样式) */
         .dashboard {
             height: 120px; background: var(--glass); border-top: 1px solid var(--border);
             display: flex; gap: 10px; padding: 15px; flex-shrink: 0; overflow-x: auto;
             backdrop-filter: blur(20px); padding-bottom: calc(15px + env(safe-area-inset-bottom));
         }
         .dash-card {
-            flex: 1; min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            flex: 1; min-width: 90px; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
             border-radius: 8px; position: relative; overflow: hidden;
         }
-        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 9px; color: rgba(255,255,255,0.6); font-weight: 600; }
-        .mini-canvas { width: 100%; height: 100%; opacity: 0.8; }
+        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 8px; color: #666; font-weight: bold; }
+        .mini-canvas { width: 100%; height: 100%; opacity: 0.6; }
 
-        /* --- 5. 启动页 (专业引导风格) --- */
+        /* 覆盖层 (V18 样式) */
         .layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; transition: opacity 0.3s; padding: 30px; box-sizing: border-box;
+            background: rgba(0,0,0,0.95); z-index: 100; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: opacity 0.3s;
         }
         .layer.hidden { opacity: 0; pointer-events: none; }
 
-        .guide-box {
-            background: #111; border: 1px solid #333; border-radius: 20px; padding: 30px;
-            max-width: 400px; width: 100%; text-align: center;
-        }
-        .guide-icon { font-size: 40px; margin-bottom: 20px; display: block; }
-        .guide-item {
-            display: flex; align-items: center; text-align: left; margin: 15px 0; font-size: 13px; color: #ccc;
-            background: #222; padding: 12px; border-radius: 10px;
-        }
-        .guide-emoji { font-size: 20px; margin-right: 15px; width: 30px; text-align: center; }
-
         .btn-main {
-            margin-top: 20px; width: 100%; padding: 16px 0; border-radius: 12px; border: none;
-            background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+            margin-top: 30px; padding: 16px 40px; border-radius: 50px; border: none;
+            background: linear-gradient(135deg, var(--accent), #0044ff); color: #fff;
+            font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
         }
-        .btn-main:active { opacity: 0.8; transform: scale(0.98); }
 
-        /* 报告页 */
-        .report-box { width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; background: #050505; }
-        .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
+        /* 报告区 (V18 样式) */
+        .report-box { width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; }
         .photo-card { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
         .photo-img { width: 100%; height: auto; display: block; border-bottom: 1px solid #333; }
-        .photo-meta { padding: 8px; font-size: 10px; text-align: center; color: #888; text-transform: uppercase; font-weight: 600; }
+        .photo-meta { padding: 8px; font-size: 10px; text-align: center; color: #888; text-transform: uppercase; font-weight: bold; }
         
         .log-item {
-            background: #111; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #222;
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px;
+            border-left: 3px solid #555;
         }
-        .log-item.stress { border-left: 4px solid var(--danger); }
-        .log-item.baseline { border-left: 4px solid var(--accent); }
+        .log-item.stress { border-left-color: var(--danger); background: rgba(255, 42, 109, 0.05); }
+        .log-item.trap { border-left-color: var(--warn); background: rgba(255, 204, 0, 0.05); }
+        .log-item.baseline { border-left-color: var(--accent); }
 
         #src_video { display: none; }
     </style>
@@ -120,107 +111,102 @@
 <body>
 
 <div class="layer" id="layer_start">
-    <div class="guide-box">
-        <h1 style="margin:0 0 5px 0; font-size: 24px;">MindReader <span style="font-size:14px; color:#666; vertical-align: middle;">V1.0</span></h1>
-        <p style="color:#666; font-size:13px; margin-bottom:30px">非语言行为分析系统</p>
-        
-        <div class="guide-item">
-            <div class="guide-emoji">📏</div>
-            <div>
-                <div style="color:#fff; font-weight:600">保持距离</div>
-                <div>请将手机放置在 50-80cm 处</div>
-            </div>
-        </div>
-        <div class="guide-item">
-            <div class="guide-emoji">👤</div>
-            <div>
-                <div style="color:#fff; font-weight:600">调整构图</div>
-                <div>确保面部、上半身、双手均在画面内</div>
-            </div>
-        </div>
-        <div class="guide-item">
-            <div class="guide-emoji">💡</div>
-            <div>
-                <div style="color:#fff; font-weight:600">环境光线</div>
-                <div>请在光线充足的环境下测试，避免逆光</div>
-            </div>
-        </div>
-
-        <button class="btn-main" onclick="startSystem()">我已准备就绪</button>
+    <h1 style="letter-spacing: -2px; margin-bottom: 5px;">MindReader <span style="color:var(--accent)">V20</span></h1>
+    <p style="color:#666; font-size:12px">FAITHFUL EDITION</p>
+    <div style="margin-top:40px; text-align:center; color:#888; font-size:12px; line-height:1.8">
+        已扩充动态审讯逻辑库：<br>
+        • <span style="color:var(--accent)">双倍题库</span>: 随机抽取，拒绝背板<br>
+        • <span style="color:var(--warn)">动态博弈</span>: 异常自动触发追问 (Trap)<br>
+        • <span style="color:var(--danger)">精准搓动</span>: 区分静态交叉与焦虑摩挲<br>
     </div>
+    <button class="btn-main" onclick="startSystem()">开始测试</button>
 </div>
 
 <div class="app">
-    <div class="hud">
-        <div class="phase-badge" id="hud_badge" style="color:var(--accent)">SYSTEM READY</div>
-        <div class="q-text" id="hud_text">正在初始化传感器...</div>
+    <div class="hud" id="hud_box">
+        <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
+        <div class="q-text" id="hud_text">传感器校准中...</div>
         <div class="progress" id="hud_bar"></div>
     </div>
 
     <div class="viewport">
         <div class="detect-tags">
-            <div class="tag danger" id="tag_nose">🤥 触碰面部 (掩饰)</div>
-            <div class="tag warn" id="tag_chin">🤔 触碰下巴 (评估)</div>
-            <div class="tag warn" id="tag_fidget">🤏 手部摩挲 (焦虑)</div>
-            <div class="tag info" id="tag_shock">😲 眼部扩张 (惊讶)</div>
-            <div class="tag danger" id="tag_cross">🙅‍♂️ 双臂交叉 (防御)</div>
+            <div class="tag danger" id="tag_block">🚨 视线阻断 (Blocking)</div>
+            <div class="tag danger" id="tag_lip">🤐 抿嘴掩饰 (Lip Compress)</div>
+            <div class="tag warn" id="tag_rub">🤏 手指搓动 (Fidgeting)</div>
+            <div class="tag warn" id="tag_cross">🙅‍♂️ 双臂交叉 (Defense)</div>
+            <div class="tag info" id="tag_shock">😲 惊讶反应 (Shock)</div>
         </div>
         <canvas id="main_canvas"></canvas>
     </div>
 
     <div class="dashboard">
         <div class="dash-card"><div class="dash-label">FACE MESH</div><canvas id="cv_face" class="mini-canvas"></canvas></div>
-        <div class="dash-card"><div class="dash-label">BODY POSE</div><canvas id="cv_pose" class="mini-canvas"></canvas></div>
+        <div class="dash-card"><div class="dash-label">SKELETON</div><canvas id="cv_pose" class="mini-canvas"></canvas></div>
         <div class="dash-card"><div class="dash-label">HANDS</div><canvas id="cv_hands" class="mini-canvas"></canvas></div>
     </div>
 </div>
 
 <div class="layer hidden" id="layer_report">
     <div class="report-box">
-        <h2 style="text-align:center; color:#fff; margin-bottom:10px; font-size:20px">行为分析档案</h2>
-        <div style="text-align:center; color:#666; font-size:12px; margin-bottom:30px">AUTOMATED BEHAVIORAL ANALYSIS REPORT</div>
+        <h2 style="text-align:center; color:var(--accent); margin-bottom:30px">心理侧写报告</h2>
         
-        <div style="font-size:11px; color:#666; font-weight:bold; letter-spacing:1px">关键帧证据对比</div>
-        <div class="evidence-row" id="evidence_area">
-            </div>
+        <div style="font-size:12px; color:#888; margin-bottom:10px">EVIDENCE SNAPSHOTS (关键帧)</div>
+        <div class="evidence-row" id="evidence_area"></div>
 
-        <div style="font-size:11px; color:#666; font-weight:bold; letter-spacing:1px; margin-top:20px">详细行为流水</div>
-        <div id="log_area" style="margin-top:10px"></div>
+        <div style="font-size:12px; color:#888; margin-bottom:10px">BEHAVIOR LOG (动态流水)</div>
+        <div id="log_area"></div>
 
-        <button class="btn-main" style="background:#333; border:1px solid #555; margin-top:30px" onclick="location.reload()">结束并重置</button>
+        <button class="btn-main" style="width:100%; background:#333; margin-top:20px" onclick="location.reload()">归档并重置</button>
     </div>
 </div>
 
 <video id="src_video" playsinline></video>
 
 <script>
-    // --- 题库系统 ---
-    const POOL_BASE = ["请放松，简单介绍一下你的工作或学习？", "你最喜欢的旅行目的地是哪里？为什么？"];
-    const POOL_STRESS = [
-        "【高压】看着我。你最近是否对身边的人撒过谎？",
-        "【两难】如果必须在事业和家庭中牺牲一个，你选哪个？",
-        "【审讯】你是否曾经利用过别人的信任来获利？"
+    // --- 1. 扩充题库 (Double Size) ---
+    // 基准池 (采集正常数据)
+    const POOL_BASE = [
+        "请简单介绍一下你的爱好？", "你最喜欢的季节是什么？为什么？",
+        "你今天早餐吃了什么？", "你平时周末一般几点起床？",
+        "你养过宠物吗？那是种什么体验？", "最近看的一部电影是什么？"
+    ];
+    // 轻压池 (Stress 1 - 试探)
+    const POOL_STRESS_1 = [
+        "你是否曾经对身边最亲近的人撒过谎？", "如果查你的手机相册，会有不想让人看的东西吗？",
+        "你认为自己是一个绝对诚实的人吗？", "你是否曾经在没人知道的情况下拿过不属于你的东西？"
+    ];
+    // 高压池 (Stress 2 - 进阶)
+    const POOL_STRESS_2 = [
+        "如果伴侣和母亲同时落水只能救一个，你救谁？立刻回答！",
+        "你是否曾经背叛过极其信任你的人？",
+        "电车难题：撞死一个亲人还是五个陌生人？",
+        "你有没有做过至今都不敢告诉任何人的亏心事？"
+    ];
+    // 陷阱池 (Trap - 触发异常时使用)
+    const POOL_TRAP = [
+        "【追问】你在撒谎吗？为什么你刚才的眼神在躲避？",
+        "【追问】你的手部动作出卖了你，你在紧张什么？",
+        "【追问】请看着我的眼睛，重新回答刚才的问题！",
+        "【追问】刚才你的眨眼频率飙升，你在隐瞒什么？"
     ];
 
-    let SCRIPT = [];
-    let sessionData = [];
+    // 全局状态
+    let sessionLog = [];
+    let currentStep = 0; 
     let currentQ = null;
     let evidence = { baseline: null, anomaly: null, maxScore: 0 };
-    let tempStats = { 
-        blinks: 0, baseEyeHeight: 0, noseTouchCount: 0, chinTouchCount: 0, 
-        fidgetCount: 0, shockCount: 0, frames: 0 
+    
+    // 统计变量
+    let stats = { 
+        blinks: 0, baseEyeHeight: 0, 
+        lipCompressCount: 0, eyeBlockCount: 0, shockCount: 0,
+        rubFrames: 0, crossFrames: 0, frames: 0,
+        lastEyeOpen: true, lastThumbPos: null
     };
 
-    // --- 启动逻辑 ---
+    // --- 启动 ---
     async function startSystem() {
-        // 随机组题
-        SCRIPT = [
-            { id: 1, type: 'baseline', time: 8, text: POOL_BASE[Math.floor(Math.random()*POOL_BASE.length)] },
-            { id: 2, type: 'baseline', time: 8, text: "好的。平时周末你一般几点起床？" },
-            { id: 3, type: 'stress', time: 10, text: POOL_STRESS[Math.floor(Math.random()*POOL_STRESS.length)] },
-            { id: 4, type: 'stress', time: 10, text: "请诚实回答：你刚才在回答问题时是否感到心虚？" }
-        ];
-
         document.getElementById('layer_start').classList.add('hidden');
         
         const video = document.getElementById('src_video');
@@ -239,36 +225,107 @@
             });
             camera.start();
 
-            setTimeout(() => runQuestion(0), 2000);
-        } catch (e) { alert("无法访问摄像头，请检查权限设置"); }
+            setTimeout(() => runStep(0), 3000);
+        } catch (e) { alert("摄像头启动失败"); }
     }
 
-    // --- 流程控制 ---
-    function runQuestion(index) {
-        if (index >= SCRIPT.length) { generateReport(); return; }
+    // --- 2. 动态逻辑核心 (The Branching Logic) ---
+    function runStep(stepIndex) {
+        currentStep = stepIndex;
+        // 重置当题统计，保留基准参数
+        const oldBase = stats.baseEyeHeight;
+        stats = { 
+            blinks: 0, lipCompressCount: 0, eyeBlockCount: 0, shockCount: 0, 
+            rubFrames: 0, crossFrames: 0, frames: 0, 
+            lastEyeOpen: true, lastThumbPos: null, baseEyeHeight: oldBase 
+        };
 
-        if (index === 2 && !evidence.baseline) captureEvidence('baseline');
+        // 智能选题系统
+        if (stepIndex === 0) {
+            // Base 1
+            currentQ = { type: 'baseline', time: 8, text: getRandom(POOL_BASE), id: 1 };
+        } else if (stepIndex === 1) {
+            // Base 2
+            currentQ = { type: 'baseline', time: 8, text: "好的。" + getRandom(POOL_BASE), id: 2 };
+        } else if (stepIndex === 2) {
+            // 抓拍一张基准照
+            if (!evidence.baseline) captureEvidence('baseline');
+            // Stress 1
+            currentQ = { type: 'stress', time: 10, text: getRandom(POOL_STRESS_1), id: 3 };
+        } else if (stepIndex === 3) {
+            // 分支判断：检查 Q3 的异常分
+            const prevLog = sessionLog[2];
+            if (prevLog && prevLog.score > 20) { // 阈值可调
+                // 异常 -> 陷阱追问
+                currentQ = { type: 'trap', time: 10, text: getRandom(POOL_TRAP), id: 4 };
+            } else {
+                // 正常 -> 继续加压
+                currentQ = { type: 'stress', time: 10, text: getRandom(POOL_STRESS_2), id: 4 };
+            }
+        } else if (stepIndex === 4) {
+            // 检查 Q4
+            const prevLog = sessionLog[3];
+            // 如果 Q4 是 Stress 且依然异常 -> 补一刀 Trap
+            if (prevLog.q.type === 'stress' && prevLog.score > 20) {
+                currentQ = { type: 'trap', time: 10, text: "【最终追问】你的生理反应非常剧烈，请给我一个解释！", id: 5 };
+            } else {
+                generateReport();
+                return;
+            }
+        } else {
+            generateReport();
+            return;
+        }
 
-        currentQ = SCRIPT[index];
-        const oldBase = tempStats.baseEyeHeight;
-        tempStats = { blinks: 0, noseTouchCount: 0, chinTouchCount: 0, fidgetCount: 0, shockCount: 0, frames: 0, lastEyeOpen: true, baseEyeHeight: oldBase };
+        updateHUD();
+        
+        setTimeout(() => {
+            finishQuestion();
+            runStep(stepIndex + 1);
+        }, currentQ.time * 1000);
+    }
 
-        // UI 更新
-        const isBase = currentQ.type === 'baseline';
+    function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function finishQuestion() {
+        const cpm = Math.round(stats.blinks / (currentQ.time / 60));
+        
+        // 计算异常分 (Score)
+        let score = 0;
+        if (currentQ.type !== 'baseline') {
+            // 获取基准 CPM
+            const baseLogs = sessionLog.filter(l => l.q.type === 'baseline');
+            const baseCPM = baseLogs.length > 0 ? baseLogs[0].cpm : 20;
+            
+            if (cpm > baseCPM * 1.4) score += 15; // 眨眼激增
+            if (stats.eyeBlockCount > 0) score += 10; // 视线阻断
+            if (stats.lipCompressCount > 10) score += 10; // 抿嘴
+            if (stats.rubFrames > 15) score += 10; // 搓手
+            if (stats.crossFrames > 30) score += 5; // 抱胸
+        }
+
+        sessionLog.push({ q: currentQ, stats: stats, cpm: cpm, score: score });
+    }
+
+    function updateHUD() {
         const badge = document.getElementById('hud_badge');
-        badge.innerText = isBase ? `BASELINE #${currentQ.id}` : `STRESS TEST #${currentQ.id}`;
-        badge.style.color = isBase ? 'var(--accent)' : 'var(--danger)';
+        const box = document.getElementById('hud_box');
+        
+        let color = 'var(--accent)';
+        if (currentQ.type === 'stress') color = 'var(--warn)';
+        if (currentQ.type === 'trap') color = 'var(--danger)';
+
+        badge.innerText = `${currentQ.type.toUpperCase()} PHASE`;
+        badge.style.color = color;
+        badge.style.borderColor = color;
+        // box.style.borderBottomColor = color; // V18 风格不该变背景，只变文字
         
         document.getElementById('hud_text').innerText = currentQ.text;
         
         const bar = document.getElementById('hud_bar');
+        bar.style.backgroundColor = color;
         bar.style.transition = 'none'; bar.style.width = '0%';
         setTimeout(() => { bar.style.transition = `width ${currentQ.time}s linear`; bar.style.width = '100%'; }, 50);
-
-        setTimeout(() => {
-            saveData();
-            runQuestion(index + 1);
-        }, currentQ.time * 1000);
     }
 
     function captureEvidence(type) {
@@ -276,11 +333,7 @@
         evidence[type] = canvas.toDataURL('image/jpeg', 0.8);
     }
 
-    function saveData() {
-        sessionData.push({ q: currentQ, stats: { ...tempStats } });
-    }
-
-    // --- 核心分析逻辑 ---
+    // --- 3. AI 核心 (Rubbing Algorithm Fix) ---
     const canvas = document.getElementById('main_canvas');
     const ctx = canvas.getContext('2d');
     const sideCtx = {
@@ -300,79 +353,104 @@
         if (!results.faceLandmarks) { ctx.restore(); return; }
 
         const face = results.faceLandmarks;
-        const noseTip = face[1]; const chinTip = face[152];
-        const eyeHeight = Math.abs(face[159].y - face[145].y);
-
+        
+        // A. 眨眼/惊讶逻辑
+        const leftEyeH = Math.abs(face[159].y - face[145].y);
+        
+        // 采集基准
         if (currentQ && currentQ.type === 'baseline') {
-            tempStats.baseEyeHeight = (tempStats.baseEyeHeight * tempStats.frames + eyeHeight) / (tempStats.frames + 1);
+            stats.baseEyeHeight = (stats.baseEyeHeight * stats.frames + leftEyeH) / (stats.frames + 1);
         }
 
-        drawConnectors(ctx, face, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
+        let frameAnomaly = 0;
+        const tags = { block: false, lip: false, rub: false, cross: false, shock: false };
 
-        let anomalyScore = 0;
-        const tags = { nose: false, chin: false, fidget: false, shock: false, cross: false };
+        // 眨眼检测
+        const isClosed = leftEyeH < 0.012;
+        if (currentQ) {
+            if (isClosed && stats.lastEyeOpen) stats.blinks++;
+            // 视线阻断 (>1s)
+            if (isClosed) {
+                if (!stats.closeStart) stats.closeStart = Date.now();
+                if (Date.now() - stats.closeStart > 1000) {
+                    tags.block = true; stats.eyeBlockCount++; frameAnomaly += 5;
+                }
+            } else { stats.closeStart = null; }
+            stats.lastEyeOpen = !isClosed;
+        }
 
-        // 1. 惊讶检测
-        if (currentQ && currentQ.type === 'stress' && tempStats.baseEyeHeight > 0) {
-            if (eyeHeight > tempStats.baseEyeHeight * 1.35) {
-                tags.shock = true; tempStats.shockCount++; anomalyScore += 5;
+        // 惊讶检测 (瞪眼)
+        if (currentQ && currentQ.type === 'stress' && stats.baseEyeHeight > 0) {
+            if (leftEyeH > stats.baseEyeHeight * 1.4) {
+                tags.shock = true; stats.shockCount++; frameAnomaly += 5;
             }
         }
 
-        // 2. 手部逻辑
-        const checkHand = (hand) => {
-            if (!hand) return;
-            const index = hand[8]; const thumb = hand[4];
+        // B. 抿嘴
+        const lipH = Math.abs(face[13].y - face[14].y);
+        if (lipH < 0.005) { tags.lip = true; stats.lipCompressCount++; frameAnomaly += 2; }
+
+        // C. 手部逻辑 (Fix: 搓动 vs 交叉)
+        const checkHands = () => {
+            if (!results.leftHandLandmarks && !results.rightHandLandmarks) return;
             
-            // 摸鼻
-            if (Math.sqrt(Math.pow(index.x - noseTip.x, 2) + Math.pow(index.y - noseTip.y, 2)) < 0.05) {
-                tags.nose = true; tempStats.noseTouchCount++; anomalyScore += 10;
-                ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 30, 0, 2*Math.PI);
-                ctx.strokeStyle = 'var(--danger)'; ctx.lineWidth = 3; ctx.stroke();
-            }
-            // 摸下巴
-            else if (Math.sqrt(Math.pow(index.x - chinTip.x, 2) + Math.pow(index.y - chinTip.y, 2)) < 0.08) {
-                tags.chin = true; tempStats.chinTouchCount++; anomalyScore += 3;
-            }
-            // 搓手指
-            if (Math.sqrt(Math.pow(index.x - thumb.x, 2) + Math.pow(index.y - thumb.y, 2)) < 0.03) {
-                tags.fidget = true; tempStats.fidgetCount++; anomalyScore += 2;
-            }
+            // 搓动检测 (Rubbing)
+            // 只要有一只手的 拇指(4) 和 食指(8) 距离很近，且发生了位移
+            [results.leftHandLandmarks, results.rightHandLandmarks].forEach(hand => {
+                if(!hand) return;
+                const thumb = hand[4]; const index = hand[8];
+                const dist = Math.sqrt(Math.pow(thumb.x - index.x, 2) + Math.pow(thumb.y - index.y, 2));
+                
+                if (dist < 0.05) {
+                    // 如果上一帧也有记录，计算位移
+                    if (stats.lastThumbPos) {
+                        const move = Math.sqrt(Math.pow(thumb.x - stats.lastThumbPos.x, 2) + Math.pow(thumb.y - stats.lastThumbPos.y, 2));
+                        if (move > 0.005) { // 动了，且靠在一起 -> 搓动
+                            tags.rub = true; stats.rubFrames++; frameAnomaly += 3;
+                        }
+                    }
+                    stats.lastThumbPos = {x: thumb.x, y: thumb.y};
+                }
+            });
         };
+        checkHands();
 
-        if (results.leftHandLandmarks) checkHand(results.leftHandLandmarks);
-        if (results.rightHandLandmarks) checkHand(results.rightHandLandmarks);
-
-        // 3. 抱胸检测
-        if(results.poseLandmarks) {
-             const pose = results.poseLandmarks;
-             const lWrist = pose[15]; const rWrist = pose[16];
-             const lShldr = pose[11]; const rHip = pose[24];
-             // 简单判定：手腕在躯干高度范围内，且水平距离近
-             if (lWrist.y > lShldr.y && lWrist.y < rHip.y && Math.abs(lWrist.x - rWrist.x) < 0.15) {
-                 tags.cross = true; anomalyScore += 4;
-             }
+        // D. 抱胸检测 (Pose)
+        if (results.poseLandmarks) {
+            const lWrist = results.poseLandmarks[15]; const rWrist = results.poseLandmarks[16];
+            const lShldr = results.poseLandmarks[11]; const rHip = results.poseLandmarks[24];
+            
+            // 都在胸前区域，且距离近
+            if (lWrist.y > lShldr.y && lWrist.y < rHip.y && Math.abs(lWrist.x - rWrist.x) < 0.2) {
+                tags.cross = true; stats.crossFrames++; frameAnomaly += 4;
+            }
         }
 
-        // 更新标签状态
-        document.getElementById('tag_nose').className = `tag danger ${tags.nose ? 'active' : ''}`;
-        document.getElementById('tag_chin').className = `tag warn ${tags.chin ? 'active' : ''}`;
-        document.getElementById('tag_fidget').className = `tag warn ${tags.fidget ? 'active' : ''}`;
+        // 绘制
+        drawConnectors(ctx, face, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
+        
+        // 更新 UI 标签
+        document.getElementById('tag_block').className = `tag danger ${tags.block ? 'active' : ''}`;
+        document.getElementById('tag_lip').className = `tag danger ${tags.lip ? 'active' : ''}`;
+        document.getElementById('tag_rub').className = `tag warn ${tags.rub ? 'active' : ''}`;
+        document.getElementById('tag_cross').className = `tag warn ${tags.cross ? 'active' : ''}`;
         document.getElementById('tag_shock').className = `tag info ${tags.shock ? 'active' : ''}`;
-        document.getElementById('tag_cross').className = `tag danger ${tags.cross ? 'active' : ''}`;
 
-        // 智能抓拍
-        if (currentQ && currentQ.type === 'stress' && anomalyScore > evidence.maxScore) {
-            evidence.maxScore = anomalyScore;
-            captureEvidence('anomaly');
+        // 抓拍逻辑 (Trigger)
+        if (currentQ && (currentQ.type === 'stress' || currentQ.type === 'trap')) {
+            if (frameAnomaly > evidence.maxScore) {
+                evidence.maxScore = frameAnomaly;
+                captureEvidence('anomaly');
+            }
         }
 
         ctx.restore();
-        drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#007aff');
+        // 侧边栏预览
+        drawSide(sideCtx.face, results.faceLandmarks, FACEMESH_TESSELATION, '#00f2ff');
         drawSide(sideCtx.pose, results.poseLandmarks, POSE_CONNECTIONS, '#fff');
-        drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#ff3b30');
+        drawSide(sideCtx.hands, results.leftHandLandmarks || results.rightHandLandmarks, HAND_CONNECTIONS, '#ff2a6d');
 
-        if(currentQ) tempStats.frames++;
+        if(currentQ) stats.frames++;
     }
 
     function drawSide(c, data, conn, color) {
@@ -384,39 +462,44 @@
     function generateReport() {
         document.getElementById('layer_report').classList.remove('hidden');
         
+        // 1. 照片
         const evArea = document.getElementById('evidence_area');
         const imgBase = evidence.baseline || "";
-        const imgAnom = evidence.anomaly || imgBase; 
-        
+        const imgAnom = evidence.anomaly || imgBase;
         evArea.innerHTML = `
             <div class="photo-card">
                 <img src="${imgBase}" class="photo-img">
-                <div class="photo-meta" style="color:var(--accent)">基准状态 (Baseline)</div>
+                <div class="photo-meta" style="color:var(--accent)">BASELINE SNAPSHOT</div>
             </div>
             <div class="photo-card" style="border-color:var(--danger)">
                 <img src="${imgAnom}" class="photo-img">
-                <div class="photo-meta" style="color:var(--danger)">压力反应 (Reaction)</div>
+                <div class="photo-meta" style="color:var(--danger)">STRESS PEAK SNAPSHOT</div>
             </div>
         `;
 
+        // 2. 日志
         const logArea = document.getElementById('log_area');
         let html = "";
         
-        sessionData.forEach(d => {
-            const isStress = d.q.type === 'stress';
+        sessionLog.forEach(d => {
             let signals = [];
+            // 基准对比
+            const baseCPM = sessionLog[0].cpm || 20; 
             
-            if (d.stats.noseTouchCount > 5) signals.push("触碰面部掩饰");
-            if (d.stats.chinTouchCount > 10) signals.push("触碰下巴评估");
-            if (d.stats.shockCount > 5) signals.push("眼部惊讶反应");
-            if (d.stats.fidgetCount > 20) signals.push("手部焦虑摩挲");
+            if (d.q.type !== 'baseline') {
+                if (d.cpm > baseCPM * 1.4) signals.push(`眨眼激增(${d.cpm})`);
+                if (d.stats.eyeBlockCount > 0) signals.push("视线阻断");
+                if (d.stats.rubFrames > 20) signals.push("焦虑搓手");
+                if (d.stats.crossFrames > 30) signals.push("防御姿态");
+                if (d.stats.shockCount > 5) signals.push("惊讶反应");
+            }
 
             const hasSignal = signals.length > 0;
             html += `
                 <div class="log-item ${d.q.type}">
-                    <div style="font-size:10px; color:#888; margin-bottom:5px">${d.q.type.toUpperCase()}</div>
-                    <div style="font-size:14px; color:#fff; font-weight:600; margin-bottom:8px">"${d.q.text}"</div>
-                    ${hasSignal ? `<div style="color:#ff8a84; font-size:12px; font-weight:bold">⚠ 检测到: ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#666">行为反应平稳</div>'}
+                    <div style="font-size:10px; opacity:0.6; margin-bottom:5px">${d.q.type.toUpperCase()}</div>
+                    <div style="font-weight:bold; margin-bottom:8px">"${d.q.text}"</div>
+                    ${hasSignal ? `<div style="color:var(--danger); font-size:12px; font-weight:bold">⚠ ${signals.join(", ")}</div>` : '<div style="font-size:12px; opacity:0.5">无明显异常</div>'}
                 </div>
             `;
         });
