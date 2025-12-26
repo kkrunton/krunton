@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MindReader V23</title>
+    <title>MindReader V24</title>
     <style>
-        /* --- 1. 视觉系统 (V18/V20 经典暗黑风格) --- */
+        /* --- 视觉系统 (高对比度修正版) --- */
         :root {
             --bg: #000000;
-            --glass: rgba(20, 20, 20, 0.9);
-            --border: rgba(255, 255, 255, 0.15);
+            --glass: rgba(20, 20, 20, 0.95); /* 加深背景，提高对比度 */
+            --border: rgba(255, 255, 255, 0.2);
             --accent: #00f2ff; 
             --warn: #ffcc00;
             --danger: #ff2a6d; 
@@ -24,28 +24,33 @@
 
         .app { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
 
-        /* HUD (严格回归 V18 布局，确保进度条可见) */
+        /* HUD */
         .hud {
-            min-height: 110px; background: var(--glass); border-bottom: 1px solid var(--border);
+            min-height: 120px; background: var(--glass); border-bottom: 1px solid var(--border);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 15px 20px; z-index: 50; flex-shrink: 0; position: relative; backdrop-filter: blur(20px);
         }
         .phase-badge {
-            font-size: 10px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
-            border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; border: 1px solid currentColor;
+            font-size: 11px; font-weight: 800; letter-spacing: 2px; padding: 4px 8px;
+            border-radius: 4px; margin-bottom: 10px; text-transform: uppercase; border: 1px solid currentColor;
         }
-        .q-text { font-size: 16px; font-weight: 600; text-align: center; line-height: 1.4; max-width: 600px; }
+        .q-text { 
+            font-size: 18px; font-weight: 700; text-align: center; line-height: 1.4; max-width: 600px;
+            color: #ffffff !important; /* 暴力强制白字 */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
         
-        /* 进度条 (V18 原版样式 - 绝对定位到底部) */
-        .progress { 
-            position: absolute; bottom: 0; left: 0; height: 3px; 
+        /* 进度条 (修复版) */
+        .progress-bar { 
+            position: absolute; bottom: 0; left: 0; height: 4px; 
             background: var(--accent); width: 0%; 
-            transition: width 0.1s linear; 
+            z-index: 100; /* 最高层级 */
+            box-shadow: 0 0 10px currentColor; /* 发光效果，确许可视性 */
         }
 
         /* 监控区 */
         .viewport {
-            flex: 1; position: relative; background: #050505; display: flex; justify-content: center; align-items: center; overflow: hidden;
+            flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden;
         }
         #main_canvas {
             width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1);
@@ -53,11 +58,12 @@
 
         /* 实时标签 */
         .detect-tags {
-            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 60;
         }
         .tag {
             background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 4px; font-size: 11px;
             font-weight: 600; border-left: 3px solid; opacity: 0; transform: translateX(20px); transition: all 0.3s ease;
+            color: #fff; /* 强制白字 */
         }
         .tag.active { opacity: 1; transform: translateX(0); }
         .tag.danger { border-color: var(--danger); color: var(--danger); }
@@ -71,24 +77,34 @@
             backdrop-filter: blur(20px); padding-bottom: calc(15px + env(safe-area-inset-bottom));
         }
         .dash-card {
-            flex: 1; min-width: 90px; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            flex: 1; min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
             border-radius: 8px; position: relative; overflow: hidden;
         }
-        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 8px; color: rgba(255,255,255,0.6); font-weight: 700; }
-        .mini-canvas { width: 100%; height: 100%; opacity: 0.7; }
+        .dash-label { position: absolute; top: 5px; left: 5px; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
+        .mini-canvas { width: 100%; height: 100%; opacity: 0.8; }
 
-        /* 覆盖层 */
+        /* 启动/报告层 */
         .layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 100; display: flex; flex-direction: column;
+            background: #000; z-index: 200; display: flex; flex-direction: column;
             align-items: center; justify-content: center; transition: opacity 0.3s; padding: 30px; box-sizing: border-box;
         }
         .layer.hidden { opacity: 0; pointer-events: none; }
 
+        .guide-box {
+            background: #111; border: 1px solid #333; border-radius: 20px; padding: 30px;
+            max-width: 400px; width: 100%; text-align: center;
+        }
+        .guide-item {
+            display: flex; align-items: center; text-align: left; margin: 15px 0; font-size: 13px; color: #ccc;
+            background: #222; padding: 15px; border-radius: 10px; border: 1px solid #333;
+        }
+        .guide-emoji { font-size: 24px; margin-right: 15px; width: 30px; text-align: center; }
+
         .btn-main {
-            margin-top: 30px; padding: 16px 40px; border-radius: 50px; border: none;
-            background: linear-gradient(135deg, var(--accent), #0044ff); color: #fff;
-            font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+            margin-top: 25px; width: 100%; padding: 18px 0; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, var(--accent), #0044ff); color: #ffffff !important;
+            font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 242, 255, 0.3);
         }
 
         /* 报告页 */
@@ -96,15 +112,14 @@
         .evidence-row { display: flex; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
         .photo-card { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
         .photo-img { width: 100%; height: auto; display: block; border-bottom: 1px solid #333; }
-        .photo-meta { padding: 8px; font-size: 10px; text-align: center; color: #888; text-transform: uppercase; font-weight: 600; }
+        .photo-meta { padding: 10px; font-size: 10px; text-align: center; color: #aaa; text-transform: uppercase; font-weight: 700; }
         
         .log-item {
-            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px;
-            border-left: 3px solid #555;
+            background: #111; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #333;
         }
-        .log-item.stress { border-left-color: var(--danger); background: rgba(255, 42, 109, 0.05); }
-        .log-item.trap { border-left-color: var(--warn); background: rgba(255, 204, 0, 0.05); }
-        .log-item.baseline { border-left-color: var(--accent); }
+        .log-item.stress { border-left: 4px solid var(--danger); }
+        .log-item.trap { border-left: 4px solid var(--warn); }
+        .log-item.baseline { border-left: 4px solid var(--accent); }
 
         #src_video { display: none; }
     </style>
@@ -117,22 +132,41 @@
 <body>
 
 <div class="layer" id="layer_start">
-    <h1 style="letter-spacing: -2px; margin-bottom: 5px;">MindReader <span style="color:var(--accent)">V23</span></h1>
-    <p style="color:#666; font-size:12px; letter-spacing: 1px;">STABLE EDITION</p>
-    <div style="margin-top:40px; text-align:center; color:#888; font-size:12px; line-height:1.8; max-width:300px;">
-        修复与优化：<br>
-        • <span style="color:var(--accent)">性能优化</span>: 修复摄像头卡顿问题<br>
-        • <span style="color:var(--warn)">逻辑恢复</span>: 摸鼻/抿嘴/手部摩挲<br>
-        • <span style="color:#fff">界面修复</span>: 进度条与布局回归
+    <div class="guide-box">
+        <h1 style="margin:0 0 10px 0; font-size: 26px; color:#fff;">MindReader <span style="font-size:16px; color:#666;">V24</span></h1>
+        <p style="color:#888; font-size:13px; margin-bottom:30px">高对比度·稳定版</p>
+        
+        <div class="guide-item">
+            <div class="guide-emoji">🧠</div>
+            <div>
+                <div style="color:#fff; font-weight:700">动态博弈</div>
+                <div>系统根据你的潜意识反应自动调整话术</div>
+            </div>
+        </div>
+        <div class="guide-item">
+            <div class="guide-emoji">📷</div>
+            <div>
+                <div style="color:#fff; font-weight:700">微表情捕捉</div>
+                <div>含摸鼻、抿嘴、焦虑摩挲等 8 种判定</div>
+            </div>
+        </div>
+        <div class="guide-item">
+            <div class="guide-emoji">📏</div>
+            <div>
+                <div style="color:#fff; font-weight:700">摆放建议</div>
+                <div>请将手机放远 (50cm+)，确保手部入镜</div>
+            </div>
+        </div>
+
+        <button class="btn-main" onclick="startSystem()">启动分析系统</button>
     </div>
-    <button class="btn-main" onclick="startSystem()">启动系统</button>
 </div>
 
 <div class="app">
     <div class="hud" id="hud_box">
         <div class="phase-badge" id="hud_badge" style="color:var(--accent); border-color:var(--accent)">SYSTEM READY</div>
-        <div class="q-text" id="hud_text">等待指令...</div>
-        <div class="progress" id="hud_bar"></div>
+        <div class="q-text" id="hud_text">传感器校准中...</div>
+        <div class="progress-bar" id="hud_bar"></div>
     </div>
 
     <div class="viewport">
@@ -156,15 +190,15 @@
 
 <div class="layer hidden" id="layer_report">
     <div class="report-box">
-        <h2 style="text-align:center; color:var(--accent); margin-bottom:30px">最终心理档案</h2>
+        <h2 style="text-align:center; color:#fff; margin-bottom:30px">最终心理档案</h2>
         
-        <div style="font-size:11px; color:#666; font-weight:bold; letter-spacing:1px">关键证据快照 (EVIDENCE)</div>
+        <div style="font-size:11px; color:#888; font-weight:bold; letter-spacing:1px">关键证据快照 (EVIDENCE)</div>
         <div class="evidence-row" id="evidence_area"></div>
 
-        <div style="font-size:11px; color:#666; font-weight:bold; letter-spacing:1px; margin-top:20px">动态分析流水 (LOG)</div>
+        <div style="font-size:11px; color:#888; font-weight:bold; letter-spacing:1px; margin-top:20px">动态分析流水 (LOG)</div>
         <div id="log_area" style="margin-top:10px"></div>
 
-        <button class="btn-main" style="width:100%; background:#333; margin-top:30px" onclick="location.reload()">归档并重置</button>
+        <button class="btn-main" style="width:100%; background:#222; margin-top:30px; border:1px solid #444" onclick="location.reload()">归档并重置</button>
     </div>
 </div>
 
@@ -172,9 +206,9 @@
 
 <script>
     // --- 题库 ---
-    const POOL_BASE = ["简单介绍一下你平时最喜欢的娱乐活动？", "如果让你拥有一个超能力，你希望是什么？"];
-    const POOL_STRESS_1 = ["【高压】看着我。你最近是否对身边的人撒过谎？", "【隐私】如果查你的手机相册，会有不想让人看的东西吗？"];
-    const POOL_STRESS_2 = ["【两难】如果必须在事业和家庭中牺牲一个，你选哪个？", "【审讯】你是否曾经利用过别人的信任来获利？"];
+    const POOL_BASE = ["请看着镜头，简单介绍一下你的爱好？", "你最喜欢的季节是什么？为什么？", "你平时周末一般几点起床？"];
+    const POOL_STRESS_1 = ["【高压】看着我。你最近是否对身边的人撒过谎？", "【高压】如果查你的手机相册，会有不想让人看的东西吗？"];
+    const POOL_STRESS_2 = ["【两难】如果必须在事业和家庭中牺牲一个，你选哪个？", "【审讯】你是否曾经背叛过极其信任你的人？"];
     const POOL_TRAP = ["【追问】你在撒谎吗？为什么你刚才的眼神在躲避？", "【追问】你的手部动作出卖了你，你在紧张什么？"];
 
     let sessionLog = [];
@@ -182,7 +216,6 @@
     let currentQ = null;
     let evidence = { baseline: null, anomaly: null, maxScore: 0 };
     
-    // 统计变量
     let stats = { 
         blinks: 0, baseEyeH: 0, baseLipH: 0, 
         noseTouch: 0, chinTouch: 0, neckTouch: 0,
@@ -194,7 +227,7 @@
         document.getElementById('layer_start').classList.add('hidden');
         const video = document.getElementById('src_video');
         try {
-            // 性能优化：强制请求 640x480，避免高清流导致卡顿
+            // 性能优化：锁定 640x480
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { width: 640, height: 480, facingMode: "user" } 
             });
@@ -219,6 +252,7 @@
     // --- 流程控制 ---
     function runStep(stepIndex) {
         currentStep = stepIndex;
+        // 继承基准值
         const oldEyeBase = stats.baseEyeH;
         const oldLipBase = stats.baseLipH;
         
@@ -269,13 +303,14 @@
         
         document.getElementById('hud_text').innerText = currentQ.text;
         
-        // 进度条修复
+        // 进度条修复动画逻辑
         const bar = document.getElementById('hud_bar');
         bar.style.transition = 'none'; 
         bar.style.width = '0%';
         bar.style.backgroundColor = color;
+        bar.style.boxShadow = `0 0 10px ${color}`;
         
-        // 强制重绘，触发动画
+        // 强制重绘
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 bar.style.transition = `width ${currentQ.time}s linear`; 
@@ -315,7 +350,7 @@
     };
 
     function onResults(results) {
-        // 性能修复：只在尺寸变化时重置 canvas 宽高
+        // 性能优化：按需调整 Canvas 尺寸
         const video = document.getElementById('src_video');
         const vW = video.videoWidth; const vH = video.videoHeight;
         
@@ -342,8 +377,8 @@
 
         drawConnectors(ctx, face, FACEMESH_TESSELATION, {color: '#ffffff11', lineWidth: 0.5});
 
-        const tags = { nose: false, neck: false, lip: false, rub: false, cross: false, shock: false };
         let frameAnomaly = 0;
+        const tags = { nose: false, neck: false, lip: false, rub: false, cross: false, shock: false };
 
         // 1. 抿嘴 (对比基准)
         if (currentQ && currentQ.type !== 'baseline' && stats.baseLipH > 0) {
@@ -374,7 +409,7 @@
             if (Math.sqrt(Math.pow(idx.x - noseTip.x, 2) + Math.pow(idx.y - noseTip.y, 2)) < 0.05) {
                 tags.nose = true; stats.noseTouch++; frameAnomaly += 8;
                 ctx.beginPath(); ctx.arc(noseTip.x * vW, noseTip.y * vH, 20, 0, 2*Math.PI);
-                ctx.strokeStyle = 'var(--danger)'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.strokeStyle = '#ff2a6d'; ctx.lineWidth = 3; ctx.stroke();
             }
             if (Math.sqrt(Math.pow(thumb.x - idx.x, 2) + Math.pow(thumb.y - idx.y, 2)) < 0.04) {
                 if (stats.lastThumbPos) {
@@ -402,7 +437,6 @@
             }
         }
 
-        // 更新标签
         document.getElementById('tag_lip').className = `tag danger ${tags.lip ? 'active' : ''}`;
         document.getElementById('tag_nose').className = `tag danger ${tags.nose ? 'active' : ''}`;
         document.getElementById('tag_neck').className = `tag warn ${tags.neck ? 'active' : ''}`;
@@ -454,16 +488,16 @@
             if (d.q.type !== 'baseline') {
                 if (d.stats.lipCompress > 15) signals.push("抿嘴掩饰");
                 if (d.stats.noseTouch > 5) signals.push("触碰鼻尖");
+                if (d.stats.neckTouch > 5) signals.push("触碰颈部");
                 if (d.stats.rubFrames > 20) signals.push("焦虑搓手");
                 if (d.stats.shockFrames > 5) signals.push("惊讶反应");
-                if (d.stats.neckTouch > 5) signals.push("触碰颈部");
             }
             const isRisk = signals.length > 0;
             html += `
                 <div class="log-item ${d.q.type}">
                     <div style="font-size:10px; color:#888; margin-bottom:5px">${d.q.type.toUpperCase()}</div>
-                    <div style="font-weight:bold; margin-bottom:8px">"${d.q.text}"</div>
-                    ${isRisk ? `<div style="color:#ff8a84; font-size:12px; font-weight:bold">⚠ ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#666">反应平稳</div>'}
+                    <div style="font-size:16px; color:#fff; font-weight:700; margin-bottom:8px">"${d.q.text}"</div>
+                    ${isRisk ? `<div style="color:#ff8a84; font-size:12px; font-weight:bold">⚠ ${signals.join(", ")}</div>` : '<div style="font-size:12px; color:#aaa">反应平稳</div>'}
                 </div>
             `;
         });
